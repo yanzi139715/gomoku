@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>五子棋 - Cyber Gomoku</title>
+<style>
+  :root {
+    --bg: #0f0f1a;
+    --board-bg: #1a1a2e;
+    --line: #2a3a5a;
+    --glow-line: rgba(42, 58, 90, 0.6);
+    --purple: #7b2ff7;
+    --cyan: #00d4ff;
+    --text: #c8d6e5;
+    --text-dim: #576574;
+    --panel-bg: rgba(26, 26, 46, 0.8);
+    --border-glow: rgba(0, 212, 255, 0.15);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh; background: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: var(--text); overflow-x: hidden;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(123,47,247,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 50%, rgba(0,212,255,0.04) 0%, transparent 50%);
+  }
+
+  /* Title */
+  h1 {
+    margin: 28px 0 6px; font-size: 36px; font-weight: 800;
+    letter-spacing: 10px;
+    background: linear-gradient(135deg, #7b2ff7 0%, #00d4ff 50%, #7b2ff7 100%);
+    background-size: 200% 200%;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: titleShimmer 4s ease-in-out infinite;
+    text-shadow: 0 0 40px rgba(123,47,247,0.3);
+    filter: drop-shadow(0 0 20px rgba(0,212,255,0.15));
+  }
+  @keyframes titleShimmer {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+  .subtitle {
+    font-size: 11px; letter-spacing: 6px; color: var(--text-dim);
+    text-transform: uppercase; margin-bottom: 18px;
+  }
+
+  /* Controls Panel */
+  #controls {
+    display: flex; gap: 10px; margin-bottom: 14px; align-items: center;
+    flex-wrap: wrap; justify-content: center;
+  }
+
+  /* Segmented Control */
+  .segmented {
+    display: flex; border-radius: 8px; overflow: hidden;
+    border: 1px solid rgba(123,47,247,0.3);
+    background: rgba(15,15,26,0.8);
+  }
+  .segmented label {
+    padding: 7px 14px; font-size: 13px; cursor: pointer;
+    color: var(--text-dim); transition: all 0.3s;
+    border-right: 1px solid rgba(123,47,247,0.15);
+    user-select: none;
+  }
+  .segmented label:last-child { border-right: none; }
+  .segmented input[type="radio"] { display: none; }
+  .segmented input[type="radio"]:checked + label {
+    background: linear-gradient(135deg, rgba(123,47,247,0.35), rgba(0,212,255,0.2));
+    color: #fff;
+    box-shadow: inset 0 0 12px rgba(123,47,247,0.2);
+  }
+  .segmented label:hover {
+    color: var(--text); background: rgba(123,47,247,0.1);
+  }
+
+  /* Select styled */
+  #controls select {
+    font-size: 13px; padding: 7px 12px; border-radius: 8px;
+    border: 1px solid rgba(123,47,247,0.3);
+    background: rgba(15,15,26,0.8); color: var(--text);
+    cursor: pointer; outline: none; transition: all 0.3s;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23576574'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+    padding-right: 28px;
+  }
+  #controls select:hover, #controls select:focus {
+    border-color: var(--purple);
+    box-shadow: 0 0 12px rgba(123,47,247,0.2);
+  }
+
+  /* Status */
+  #status {
+    margin-bottom: 12px; font-size: 16px; height: 32px;
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 20px; border-radius: 20px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-glow);
+    transition: all 0.3s;
+  }
+  .stone-icon {
+    width: 18px; height: 18px; border-radius: 50%; display: inline-block;
+    vertical-align: middle; position: relative;
+  }
+  .stone-icon.black {
+    background: radial-gradient(circle at 35% 35%, #9b59b6, #2c003e);
+    box-shadow: 0 0 8px rgba(123,47,247,0.5);
+  }
+  .stone-icon.white {
+    background: radial-gradient(circle at 35% 35%, #e0f7ff, #0099cc);
+    box-shadow: 0 0 8px rgba(0,212,255,0.5);
+  }
+  .status-pulse {
+    animation: statusPulse 1.5s ease-in-out infinite;
+  }
+  @keyframes statusPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  /* Board */
+  #board-wrap {
+    position: relative; padding: 20px;
+    background: var(--board-bg); border-radius: 14px;
+    box-shadow:
+      0 0 1px rgba(0,212,255,0.3),
+      0 0 30px rgba(0,212,255,0.06),
+      0 0 60px rgba(123,47,247,0.04),
+      0 8px 32px rgba(0,0,0,0.6);
+    border: 1px solid rgba(0,212,255,0.1);
+  }
+  #board-wrap::before {
+    content: ''; position: absolute; inset: -1px; border-radius: 15px;
+    background: linear-gradient(135deg, rgba(123,47,247,0.15), transparent 40%, transparent 60%, rgba(0,212,255,0.15));
+    z-index: -1;
+  }
+  canvas { display: block; cursor: pointer; border-radius: 4px; }
+
+  /* Buttons */
+  .btn {
+    margin-top: 16px; padding: 10px 36px; font-size: 14px;
+    border: none; border-radius: 10px; cursor: pointer;
+    background: linear-gradient(135deg, #7b2ff7, #5b17d4);
+    color: #fff; font-weight: 600; letter-spacing: 2px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 15px rgba(123,47,247,0.3);
+    position: relative; overflow: hidden;
+  }
+  .btn::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .btn:hover {
+    transform: scale(1.06);
+    box-shadow: 0 0 25px rgba(123,47,247,0.5), 0 0 50px rgba(123,47,247,0.2);
+  }
+  .btn:hover::before { opacity: 1; }
+  .btn:active { transform: scale(0.98); }
+
+  /* Info Panel */
+  #info-panel {
+    margin-top: 14px; padding: 10px 24px; border-radius: 10px;
+    background: var(--panel-bg); border: 1px solid var(--border-glow);
+    display: flex; gap: 24px; font-size: 13px; color: var(--text-dim);
+  }
+  #info-panel span { color: var(--text); font-weight: 600; }
+
+  /* Win animation overlay */
+  @keyframes winPulse {
+    0% { box-shadow: 0 0 20px rgba(0,212,255,0.2), 0 0 40px rgba(123,47,247,0.1); }
+    50% { box-shadow: 0 0 40px rgba(0,212,255,0.4), 0 0 80px rgba(123,47,247,0.25); }
+    100% { box-shadow: 0 0 20px rgba(0,212,255,0.2), 0 0 40px rgba(123,47,247,0.1); }
+  }
+  #board-wrap.winning {
+    animation: winPulse 0.8s ease-in-out 3;
+    border-color: rgba(0,212,255,0.4);
+  }
+
+  /* Hidden class */
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<h1>五 子 棋</h1>
+<div class="subtitle">CYBER GOMOKU</div>
+
+<div id="controls">
+  <div class="segmented" id="modeSeg">
+    <input type="radio" name="mode" id="modePvp" value="pvp"><label for="modePvp" onclick="onModeChange()">双人对战</label>
+    <input type="radio" name="mode" id="modePvc" value="pvc" checked><label for="modePvc" onclick="onModeChange()">人机对战</label>
+  </div>
+  <select id="diffSelect" onchange="resetGame()">
+    <option value="easy">简单</option>
+    <option value="medium" selected>普通</option>
+    <option value="hard">困难</option>
+  </select>
+  <select id="colorSelect" onchange="resetGame()">
+    <option value="1" selected>执黑先手</option>
+    <option value="2">执白后手</option>
+  </select>
+</div>
+
+<div id="status"><span class="stone-icon black status-pulse"></span> 黑方落子</div>
+<div id="board-wrap"><canvas id="board"></canvas></div>
+<button class="btn" onclick="resetGame()">重新开始</button>
+
+<div id="info-panel">
+  <div>步数：<span id="moveCount">0</span></div>
+  <div>模式：<span id="modeLabel">人机对战</span></div>
+</div>
+
+<script>
+const SIZE = 15, CELL = 36, PAD = 22, STONE_R = 14;
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const total = CELL * (SIZE - 1) + PAD * 2;
+canvas.width = canvas.height = total;
+
+let grid, currentPlayer, gameOver, winLine, hover, aiThinking, moveCount;
+let winAnimFrame = 0;
+
+function getMode() {
+  return document.getElementById('modePvc').checked ? 'pvc' : 'pvp';
+}
+function getDiff() { return document.getElementById('diffSelect').value; }
+function getPlayerColor() { return +document.getElementById('colorSelect').value; }
+function getAiColor() { return 3 - getPlayerColor(); }
+
+function onModeChange() {
+  // slight delay to let radio state update
+  setTimeout(resetGame, 10);
+}
+
+function resetGame() {
+  grid = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+  currentPlayer = 1; gameOver = false; winLine = null; hover = null; aiThinking = false;
+  moveCount = 0; winAnimFrame = 0;
+  document.getElementById('board-wrap').classList.remove('winning');
+  updateModeUI();
+  updateStatus();
+  updateInfo();
+  draw();
+  if (getMode() === 'pvc' && getAiColor() === 1) {
+    aiThinking = true;
+    setTimeout(aiMove, 300);
+  }
+}
+
+function updateModeUI() {
+  const isPvc = getMode() === 'pvc';
+  document.getElementById('diffSelect').classList.toggle('hidden', !isPvc);
+  document.getElementById('colorSelect').classList.toggle('hidden', !isPvc);
+  document.getElementById('modeLabel').textContent = isPvc ? '人机对战' : '双人对战';
+}
+
+function updateStatus(msg) {
+  const el = document.getElementById('status');
+  if (msg) { el.innerHTML = msg; return; }
+  const cls = currentPlayer === 1 ? 'black' : 'white';
+  const name = currentPlayer === 1 ? '黑方' : '白方';
+  el.innerHTML = `<span class="stone-icon ${cls} status-pulse"></span> ${name}落子`;
+}
+
+function updateInfo() {
+  document.getElementById('moveCount').textContent = moveCount;
+}
+
+/* ========== Drawing ========== */
+
+function draw() {
+  // Board background
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, total, total);
+
+  // Subtle grid glow background
+  const bgGrad = ctx.createRadialGradient(total/2, total/2, 0, total/2, total/2, total/2);
+  bgGrad.addColorStop(0, 'rgba(42,58,90,0.08)');
+  bgGrad.addColorStop(1, 'rgba(15,15,26,0)');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, total, total);
+
+  // Grid lines with glow
+  ctx.save();
+  ctx.shadowColor = 'rgba(42,58,90,0.4)';
+  ctx.shadowBlur = 3;
+  ctx.strokeStyle = '#2a3a5a'; ctx.lineWidth = 1;
+  for (let i = 0; i < SIZE; i++) {
+    const p = PAD + i * CELL;
+    ctx.beginPath(); ctx.moveTo(PAD, p); ctx.lineTo(PAD + (SIZE-1) * CELL, p); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p, PAD); ctx.lineTo(p, PAD + (SIZE-1) * CELL); ctx.stroke();
+  }
+  ctx.restore();
+
+  // Star points
+  const stars = [3, 7, 11];
+  for (const r of stars) for (const c of stars) {
+    const sx = PAD + c * CELL, sy = PAD + r * CELL;
+    ctx.beginPath(); ctx.arc(sx, sy, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#2a3a5a'; ctx.fill();
+    // tiny glow
+    ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(42,58,90,0.25)'; ctx.fill();
+  }
+
+  // Stones
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    if (grid[r][c]) drawStone(r, c, grid[r][c]);
+  }
+
+  // Hover preview with pulse
+  if (hover && !gameOver && !aiThinking && grid[hover.r][hover.c] === 0) {
+    const isPvc = getMode() === 'pvc';
+    const showHover = !isPvc || currentPlayer === getPlayerColor();
+    if (showHover) {
+      ctx.save();
+      ctx.globalAlpha = 0.3 + 0.08 * Math.sin(Date.now() / 300);
+      drawStone(hover.r, hover.c, currentPlayer);
+      // pulse ring
+      const hx = PAD + hover.c * CELL, hy = PAD + hover.r * CELL;
+      const pulseR = STONE_R + 4 + 3 * Math.sin(Date.now() / 250);
+      ctx.beginPath(); ctx.arc(hx, hy, pulseR, 0, Math.PI * 2);
+      ctx.strokeStyle = currentPlayer === 1 ? 'rgba(123,47,247,0.3)' : 'rgba(0,212,255,0.3)';
+      ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // Win line
+  if (winLine) {
+    const a = winLine[0], b = winLine[winLine.length - 1];
+    const x1 = PAD + a.c * CELL, y1 = PAD + a.r * CELL;
+    const x2 = PAD + b.c * CELL, y2 = PAD + b.r * CELL;
+
+    // animated glow
+    const pulse = 0.6 + 0.4 * Math.sin(Date.now() / 200);
+    ctx.save();
+    ctx.shadowColor = `rgba(0,212,255,${0.6 * pulse})`;
+    ctx.shadowBlur = 15 * pulse;
+    ctx.strokeStyle = `rgba(0,212,255,${0.5 + 0.3 * pulse})`;
+    ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.restore();
+
+    // solid core line
+    ctx.save();
+    ctx.strokeStyle = '#00d4ff'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.restore();
+
+    // highlight winning stones
+    for (const cell of winLine) {
+      const cx = PAD + cell.c * CELL, cy = PAD + cell.r * CELL;
+      ctx.save();
+      ctx.shadowColor = `rgba(0,212,255,${0.8 * pulse})`;
+      ctx.shadowBlur = 12 * pulse;
+      ctx.beginPath(); ctx.arc(cx, cy, STONE_R + 2, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(0,212,255,${0.5 * pulse})`;
+      ctx.lineWidth = 2; ctx.stroke();
+      ctx.restore();
+    }
+
+    // continue animation
+    winAnimFrame = requestAnimationFrame(draw);
+  }
+}
+
+function drawStone(r, c, player) {
+  const x = PAD + c * CELL, y = PAD + r * CELL;
+
+  // Glow
+  ctx.save();
+  if (player === 1) {
+    ctx.shadowColor = 'rgba(123,47,247,0.45)';
+    ctx.shadowBlur = 10;
+  } else {
+    ctx.shadowColor = 'rgba(0,212,255,0.45)';
+    ctx.shadowBlur = 10;
+  }
+
+  ctx.beginPath(); ctx.arc(x, y, STONE_R, 0, Math.PI * 2);
+  const grad = ctx.createRadialGradient(x - 4, y - 4, 1, x, y, STONE_R);
+  if (player === 1) {
+    grad.addColorStop(0, '#9b59b6');
+    grad.addColorStop(0.6, '#5b2d8e');
+    grad.addColorStop(1, '#2c003e');
+  } else {
+    grad.addColorStop(0, '#e0f7ff');
+    grad.addColorStop(0.5, '#7fdbff');
+    grad.addColorStop(1, '#007ea8');
+  }
+  ctx.fillStyle = grad; ctx.fill();
+
+  // Edge glow ring
+  ctx.beginPath(); ctx.arc(x, y, STONE_R, 0, Math.PI * 2);
+  ctx.strokeStyle = player === 1 ? 'rgba(123,47,247,0.5)' : 'rgba(0,212,255,0.4)';
+  ctx.lineWidth = 1.2; ctx.stroke();
+
+  // Specular highlight
+  ctx.beginPath();
+  ctx.ellipse(x - 3, y - 4, 4, 2.5, -0.4, 0, Math.PI * 2);
+  ctx.fillStyle = player === 1 ? 'rgba(200,160,255,0.25)' : 'rgba(255,255,255,0.35)';
+  ctx.fill();
+
+  ctx.restore();
+}
+
+/* ========== Interaction ========== */
+
+function toGrid(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+  const c = Math.round((mx - PAD) / CELL);
+  const r = Math.round((my - PAD) / CELL);
+  if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) return null;
+  return { r, c };
+}
+
+let hoverRAF = null;
+canvas.addEventListener('mousemove', e => {
+  const g = toGrid(e);
+  if ((!g && !hover) || (g && hover && g.r === hover.r && g.c === hover.c)) return;
+  hover = g;
+  if (!winLine) { // don't interfere with win animation
+    if (hoverRAF) cancelAnimationFrame(hoverRAF);
+    hoverRAF = requestAnimationFrame(draw);
+  }
+});
+canvas.addEventListener('mouseleave', () => {
+  hover = null;
+  if (!winLine) {
+    if (hoverRAF) cancelAnimationFrame(hoverRAF);
+    hoverRAF = requestAnimationFrame(draw);
+  }
+});
+
+canvas.addEventListener('click', e => {
+  if (gameOver || aiThinking) return;
+  const g = toGrid(e);
+  if (!g || grid[g.r][g.c]) return;
+  if (getMode() === 'pvc' && currentPlayer !== getPlayerColor()) return;
+  placeStone(g.r, g.c);
+});
+
+function placeStone(r, c) {
+  grid[r][c] = currentPlayer;
+  moveCount++;
+  updateInfo();
+
+  const win = checkWin(r, c, currentPlayer);
+  if (win) {
+    gameOver = true; winLine = win;
+    const name = currentPlayer === 1 ? '黑方' : '白方';
+    const cls = currentPlayer === 1 ? 'black' : 'white';
+    const extra = (getMode() === 'pvc' && currentPlayer === getAiColor()) ? '（电脑）' : '';
+    updateStatus(`<span class="stone-icon ${cls}"></span> ${name}${extra}获胜！`);
+    document.getElementById('board-wrap').classList.add('winning');
+  } else if (isBoardFull()) {
+    gameOver = true;
+    updateStatus('平局！');
+  } else {
+    currentPlayer = 3 - currentPlayer;
+  }
+  draw();
+  if (!gameOver && getMode() === 'pvc' && currentPlayer === getAiColor()) {
+    aiThinking = true;
+    setTimeout(aiMove, 200);
+  }
+}
+
+/* ========== AI Engine ========== */
+
+const DIRS = [[0,1],[1,0],[1,1],[1,-1]];
+
+function checkWin(r, c, p) {
+  for (const [dr, dc] of DIRS) {
+    let cells = [{ r, c }];
+    for (const sign of [1, -1]) {
+      let nr = r + dr * sign, nc = c + dc * sign;
+      while (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && grid[nr][nc] === p) {
+        if (sign === 1) cells.push({ r: nr, c: nc }); else cells.unshift({ r: nr, c: nc });
+        nr += dr * sign; nc += dc * sign;
+      }
+    }
+    if (cells.length >= 5) return cells;
+  }
+  return null;
+}
+
+function isBoardFull() {
+  return grid.every(row => row.every(v => v !== 0));
+}
+
+function scoreLine(p) {
+  let score = 0;
+  const opp = 3 - p;
+  for (const [dr, dc] of DIRS) {
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        let mine = 0, blocked = false;
+        for (let i = 0; i < 5; i++) {
+          const nr = r + dr * i, nc = c + dc * i;
+          if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) { blocked = true; break; }
+          if (grid[nr][nc] === p) mine++;
+          else if (grid[nr][nc] === opp) { blocked = true; break; }
+        }
+        if (blocked || mine === 0) continue;
+        const beforeR = r - dr, beforeC = c - dc;
+        const afterR = r + dr * 5, afterC = c + dc * 5;
+        const beforeOpen = beforeR >= 0 && beforeR < SIZE && beforeC >= 0 && beforeC < SIZE && grid[beforeR][beforeC] === 0;
+        const afterOpen = afterR >= 0 && afterR < SIZE && afterC >= 0 && afterC < SIZE && grid[afterR][afterC] === 0;
+        if (!beforeOpen && !afterOpen) continue;
+        const openEnds = (beforeOpen ? 1 : 0) + (afterOpen ? 1 : 0);
+        score += patternScore(mine, openEnds);
+      }
+    }
+  }
+  return score;
+}
+
+function patternScore(count, openEnds) {
+  if (count >= 5) return 1000000;
+  if (count === 4) return openEnds === 2 ? 500000 : 50000;
+  if (count === 3) return openEnds === 2 ? 50000 : 5000;
+  if (count === 2) return openEnds === 2 ? 5000 : 500;
+  if (count === 1) return openEnds === 2 ? 500 : 50;
+  return 0;
+}
+
+function evaluate(aiColor) {
+  return scoreLine(aiColor) - scoreLine(3 - aiColor) * 1.2;
+}
+
+function getCandidates(range) {
+  const candidates = new Set();
+  let hasStone = false;
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    if (grid[r][c]) {
+      hasStone = true;
+      for (let dr = -range; dr <= range; dr++) for (let dc = -range; dc <= range; dc++) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && grid[nr][nc] === 0) {
+          candidates.add(nr * SIZE + nc);
+        }
+      }
+    }
+  }
+  if (!hasStone) return [{ r: 7, c: 7 }];
+  return [...candidates].map(idx => ({ r: Math.floor(idx / SIZE), c: idx % SIZE }));
+}
+
+function quickScore(r, c, aiColor) {
+  grid[r][c] = aiColor;
+  const atk = scoreLine(aiColor);
+  grid[r][c] = 3 - aiColor;
+  const def = scoreLine(3 - aiColor);
+  grid[r][c] = 0;
+  return atk + def;
+}
+
+function minimax(depth, alpha, beta, isMaximizing, aiColor) {
+  if (depth === 0) return evaluate(aiColor);
+  const candidates = getCandidates(1);
+  if (candidates.length === 0) return evaluate(aiColor);
+
+  candidates.sort((a, b) =>
+    quickScore(b.r, b.c, aiColor) - quickScore(a.r, a.c, aiColor)
+  );
+  const limit = depth >= 2 ? 12 : 20;
+  const moves = candidates.slice(0, limit);
+
+  if (isMaximizing) {
+    let maxEval = -Infinity;
+    for (const { r, c } of moves) {
+      grid[r][c] = aiColor;
+      if (checkWin(r, c, aiColor)) { grid[r][c] = 0; return 1000000 + depth; }
+      const ev = minimax(depth - 1, alpha, beta, false, aiColor);
+      grid[r][c] = 0;
+      maxEval = Math.max(maxEval, ev);
+      alpha = Math.max(alpha, ev);
+      if (beta <= alpha) break;
+    }
+    return maxEval;
+  } else {
+    const humanColor = 3 - aiColor;
+    let minEval = Infinity;
+    for (const { r, c } of moves) {
+      grid[r][c] = humanColor;
+      if (checkWin(r, c, humanColor)) { grid[r][c] = 0; return -1000000 - depth; }
+      const ev = minimax(depth - 1, alpha, beta, true, aiColor);
+      grid[r][c] = 0;
+      minEval = Math.min(minEval, ev);
+      beta = Math.min(beta, ev);
+      if (beta <= alpha) break;
+    }
+    return minEval;
+  }
+}
+
+function aiMove() {
+  const aiColor = getAiColor();
+  const diff = getDiff();
+  let depth, range;
+  if (diff === 'easy') { depth = 1; range = 2; }
+  else if (diff === 'medium') { depth = 2; range = 1; }
+  else { depth = 3; range = 1; }
+
+  const candidates = getCandidates(range);
+  let bestScore = -Infinity, bestMove = candidates[0];
+
+  // instant win check
+  for (const { r, c } of candidates) {
+    grid[r][c] = aiColor;
+    if (checkWin(r, c, aiColor)) { grid[r][c] = 0; bestMove = { r, c }; bestScore = Infinity; break; }
+    grid[r][c] = 0;
+  }
+  // block check
+  if (bestScore < Infinity) {
+    for (const { r, c } of candidates) {
+      grid[r][c] = 3 - aiColor;
+      if (checkWin(r, c, 3 - aiColor)) { grid[r][c] = 0; bestMove = { r, c }; break; }
+      grid[r][c] = 0;
+    }
+  }
+
+  // minimax
+  if (bestScore < Infinity) {
+    candidates.sort((a, b) =>
+      quickScore(b.r, b.c, aiColor) - quickScore(a.r, a.c, aiColor)
+    );
+    const limit = diff === 'hard' ? 15 : (diff === 'medium' ? 12 : 10);
+    const moves = candidates.slice(0, limit);
+
+    for (const { r, c } of moves) {
+      grid[r][c] = aiColor;
+      if (checkWin(r, c, aiColor)) { grid[r][c] = 0; bestMove = { r, c }; break; }
+      const score = minimax(depth - 1, -Infinity, Infinity, false, aiColor);
+      grid[r][c] = 0;
+      if (score > bestScore) { bestScore = score; bestMove = { r, c }; }
+    }
+  }
+
+  aiThinking = false;
+  placeStone(bestMove.r, bestMove.c);
+}
+
+resetGame();
+</script>
+</body>
+</html>

@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GOMOKU</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --black: #111111;
+    --white: #ffffff;
+    --brand: #e63946;
+    --gray-light: #f5f5f5;
+    --gray-mid: #999999;
+  }
+
+  body {
+    background: var(--white);
+    color: var(--black);
+    font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    margin-top: 48px;
+    margin-bottom: 40px;
+    text-align: center;
+  }
+  header h1 {
+    font-size: 56px;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--black);
+    line-height: 1;
+  }
+  header h1 span {
+    color: var(--brand);
+  }
+  header p {
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+  }
+
+  /* ===== MAIN LAYOUT ===== */
+  .main {
+    display: flex;
+    gap: 48px;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 0 24px;
+  }
+
+  /* ===== BOARD ===== */
+  .board-container {
+    position: relative;
+  }
+  canvas#board {
+    display: block;
+    cursor: pointer;
+  }
+
+  /* ===== SIDE PANEL ===== */
+  .panel {
+    width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .panel-section {
+    border-top: 1px solid var(--black);
+    padding: 16px 0;
+  }
+  .panel-section:last-child {
+    border-bottom: 1px solid var(--black);
+  }
+
+  .panel-label {
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    margin-bottom: 8px;
+  }
+
+  .panel-value {
+    font-size: 14px;
+    font-weight: 400;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    color: var(--black);
+  }
+
+  /* Status display */
+  .status-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .status-stone {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-stone.black {
+    background: var(--black);
+  }
+  .status-stone.white {
+    background: var(--white);
+    border: 1px solid var(--black);
+  }
+
+  /* Controls */
+  .control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .control-row:last-child { margin-bottom: 0; }
+
+  .control-row label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+  }
+
+  .control-row select {
+    font-family: 'Inter', 'Helvetica Neue', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    padding: 4px 8px;
+    border: 1px solid var(--black);
+    background: var(--white);
+    color: var(--black);
+    cursor: pointer;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23111' fill='none' stroke-width='1'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 24px;
+  }
+  .control-row select:hover {
+    border-color: var(--brand);
+  }
+
+  /* Buttons */
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 10px 0;
+    font-family: 'Inter', 'Helvetica Neue', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border: 1px solid var(--black);
+    background: var(--white);
+    color: var(--black);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    text-align: center;
+  }
+  .btn:hover {
+    background: var(--brand);
+    color: var(--white);
+    border-color: var(--brand);
+  }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 16px;
+    align-items: baseline;
+  }
+  .stats-grid .stat-label {
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--gray-mid);
+    letter-spacing: 0.05em;
+  }
+  .stats-grid .stat-value {
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    text-align: right;
+    color: var(--black);
+  }
+
+  /* ===== FOOTER ===== */
+  footer {
+    margin-top: 48px;
+    margin-bottom: 32px;
+    text-align: center;
+  }
+  footer p {
+    font-size: 9px;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>GO<span>M</span>OKU</h1>
+  <p>Five in a Row &mdash; Strategy Game</p>
+</header>
+
+<div class="main">
+  <!-- Board -->
+  <div class="board-container">
+    <canvas id="board"></canvas>
+  </div>
+
+  <!-- Side Panel -->
+  <div class="panel">
+
+    <!-- Status -->
+    <div class="panel-section">
+      <div class="panel-label">Status</div>
+      <div class="panel-value status-display" id="status">
+        <span class="status-stone black"></span>
+        <span>BLACK TO PLAY</span>
+      </div>
+    </div>
+
+    <!-- Move Count -->
+    <div class="panel-section">
+      <div class="panel-label">Game Info</div>
+      <div class="stats-grid">
+        <span class="stat-label">Move</span>
+        <span class="stat-value" id="moveCount">0</span>
+        <span class="stat-label">Mode</span>
+        <span class="stat-value" id="modeDisplay">PVC</span>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="panel-section">
+      <div class="panel-label">Settings</div>
+
+      <div class="control-row">
+        <label>Mode</label>
+        <select id="modeSelect" onchange="resetGame()">
+          <option value="pvp">PVP</option>
+          <option value="pvc" selected>PVC</option>
+        </select>
+      </div>
+
+      <div class="control-row" id="diffRow">
+        <label>Level</label>
+        <select id="diffSelect" onchange="resetGame()">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Normal</option>
+          <option value="hard">Hard</option>
+        </select>
+      </div>
+
+      <div class="control-row" id="colorRow">
+        <label>Play as</label>
+        <select id="colorSelect" onchange="resetGame()">
+          <option value="1" selected>Black</option>
+          <option value="2">White</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="panel-section">
+      <button class="btn" onclick="resetGame()">RESTART</button>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <p>Gomoku &mdash; Swiss International Style</p>
+</footer>
+
+<script>
+const SIZE = 15, CELL = 38, PAD = 32, STONE_R = 15;
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const total = CELL * (SIZE - 1) + PAD * 2;
+canvas.width = canvas.height = total;
+
+let grid, currentPlayer, gameOver, winLine, hover, aiThinking, moveCount;
+
+const COL_LABELS = 'ABCDEFGHIJKLMNO'.split('');
+
+function getMode() { return document.getElementById('modeSelect').value; }
+function getDiff() { return document.getElementById('diffSelect').value; }
+function getPlayerColor() { return +document.getElementById('colorSelect').value; }
+function getAiColor() { return 3 - getPlayerColor(); }
+
+function resetGame() {
+  grid = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+  currentPlayer = 1; gameOver = false; winLine = null; hover = null; aiThinking = false; moveCount = 0;
+  updateModeUI();
+  updateStatus();
+  updateMoveCount();
+  draw();
+  if (getMode() === 'pvc' && getAiColor() === 1) {
+    aiThinking = true;
+    setTimeout(aiMove, 300);
+  }
+}
+
+function updateModeUI() {
+  const isPvc = getMode() === 'pvc';
+  document.getElementById('diffRow').style.display = isPvc ? '' : 'none';
+  document.getElementById('colorRow').style.display = isPvc ? '' : 'none';
+  document.getElementById('modeDisplay').textContent = isPvc ? 'PVC' : 'PVP';
+}
+
+function updateMoveCount() {
+  document.getElementById('moveCount').textContent = moveCount;
+}
+
+function updateStatus(msg) {
+  const el = document.getElementById('status');
+  if (msg) { el.innerHTML = msg; return; }
+  const cls = currentPlayer === 1 ? 'black' : 'white';
+  const name = currentPlayer === 1 ? 'BLACK' : 'WHITE';
+  el.innerHTML = `<span class="status-stone ${cls}"></span><span>${name} TO PLAY</span>`;
+}
+
+function draw() {
+  // Background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, total, total);
+
+  // Grid lines
+  ctx.strokeStyle = '#111111';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < SIZE; i++) {
+    const p = PAD + i * CELL;
+    ctx.beginPath(); ctx.moveTo(PAD, p); ctx.lineTo(PAD + (SIZE - 1) * CELL, p); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p, PAD); ctx.lineTo(p, PAD + (SIZE - 1) * CELL); ctx.stroke();
+  }
+
+  // Coordinate labels
+  ctx.fillStyle = '#999999';
+  ctx.font = '500 9px Inter, Helvetica Neue, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < SIZE; i++) {
+    // Column labels (top)
+    ctx.fillText(COL_LABELS[i], PAD + i * CELL, PAD - 18);
+    // Row labels (right) — 15 at top, 1 at bottom
+    ctx.textAlign = 'left';
+    ctx.fillText(String(SIZE - i), PAD + (SIZE - 1) * CELL + 14, PAD + i * CELL);
+    ctx.textAlign = 'center';
+  }
+
+  // Star points
+  const stars = [3, 7, 11];
+  ctx.fillStyle = '#111111';
+  for (const r of stars) for (const c of stars) {
+    ctx.beginPath();
+    ctx.arc(PAD + c * CELL, PAD + r * CELL, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Stones
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    if (grid[r][c]) drawStone(r, c, grid[r][c]);
+  }
+
+  // Hover preview
+  if (hover && !gameOver && !aiThinking && grid[hover.r][hover.c] === 0) {
+    const isPvc = getMode() === 'pvc';
+    const showHover = !isPvc || currentPlayer === getPlayerColor();
+    if (showHover) {
+      ctx.globalAlpha = 0.25;
+      drawStone(hover.r, hover.c, currentPlayer);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Win line
+  if (winLine) {
+    ctx.strokeStyle = '#e63946';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    const a = winLine[0], b = winLine[winLine.length - 1];
+    ctx.beginPath();
+    ctx.moveTo(PAD + a.c * CELL, PAD + a.r * CELL);
+    ctx.lineTo(PAD + b.c * CELL, PAD + b.r * CELL);
+    ctx.stroke();
+
+    // Highlight winning stones
+    for (const cell of winLine) {
+      const x = PAD + cell.c * CELL, y = PAD + cell.r * CELL;
+      ctx.beginPath();
+      ctx.arc(x, y, STONE_R + 3, 0, Math.PI * 2);
+      ctx.strokeStyle = '#e63946';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+}
+
+function drawStone(r, c, player) {
+  const x = PAD + c * CELL, y = PAD + r * CELL;
+  ctx.beginPath();
+  ctx.arc(x, y, STONE_R, 0, Math.PI * 2);
+
+  if (player === 1) {
+    // Pure black, geometric
+    ctx.fillStyle = '#111111';
+    ctx.fill();
+  } else {
+    // Pure white with 1px black stroke
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = '#111111';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+}
+
+function toGrid(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+  const c = Math.round((mx - PAD) / CELL);
+  const r = Math.round((my - PAD) / CELL);
+  if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) return null;
+  return { r, c };
+}
+
+canvas.addEventListener('mousemove', e => {
+  const g = toGrid(e);
+  if ((!g && !hover) || (g && hover && g.r === hover.r && g.c === hover.c)) return;
+  hover = g; draw();
+});
+canvas.addEventListener('mouseleave', () => { hover = null; draw(); });
+
+canvas.addEventListener('click', e => {
+  if (gameOver || aiThinking) return;
+  const g = toGrid(e);
+  if (!g || grid[g.r][g.c]) return;
+  if (getMode() === 'pvc' && currentPlayer !== getPlayerColor()) return;
+  placeStone(g.r, g.c);
+});
+
+function placeStone(r, c) {
+  grid[r][c] = currentPlayer;
+  moveCount++;
+  updateMoveCount();
+  const win = checkWin(r, c, currentPlayer);
+  if (win) {
+    gameOver = true; winLine = win;
+    const name = currentPlayer === 1 ? 'BLACK' : 'WHITE';
+    const cls = currentPlayer === 1 ? 'black' : 'white';
+    const extra = (getMode() === 'pvc' && currentPlayer === getAiColor()) ? ' (AI)' : '';
+    updateStatus(`<span class="status-stone ${cls}"></span><span>${name}${extra} WINS</span>`);
+  } else if (isBoardFull()) {
+    gameOver = true;
+    updateStatus('<span>DRAW</span>');
+  } else {
+    currentPlayer = 3 - currentPlayer;
+  }
+  draw();
+  if (!gameOver && getMode() === 'pvc' && currentPlayer === getAiColor()) {
+    aiThinking = true;
+    setTimeout(aiMove, 200);
+  }
+}
+
+// ========== AI ==========
+const DIRS = [[0,1],[1,0],[1,1],[1,-1]];
+
+function checkWin(r, c, p) {
+  for (const [dr, dc] of DIRS) {
+    let cells = [{ r, c }];
+    for (const sign of [1, -1]) {
+      let nr = r + dr * sign, nc = c + dc * sign;
+      while (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && grid[nr][nc] === p) {
+        if (sign === 1) cells.push({ r: nr, c: nc }); else cells.unshift({ r: nr, c: nc });
+        nr += dr * sign; nc += dc * sign;
+      }
+    }
+    if (cells.length >= 5) return cells;
+  }
+  return null;
+}
+
+function isBoardFull() {
+  return grid.every(row => row.every(v => v !== 0));
+}
+
+function scoreLine(g, p) {
+  const opp = 3 - p;
+  let score = 0;
+  for (const [dr, dc] of DIRS) {
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        let mine = 0, blocked = false;
+        for (let i = 0; i < 5; i++) {
+          const nr = r + dr * i, nc = c + dc * i;
+          if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) { blocked = true; break; }
+          if (g[nr][nc] === p) mine++;
+          else if (g[nr][nc] === opp) { blocked = true; break; }
+        }
+        if (blocked || mine === 0) continue;
+        const beforeR = r - dr, beforeC = c - dc;
+        const afterR = r + dr * 5, afterC = c + dc * 5;
+        const beforeOpen = beforeR >= 0 && beforeR < SIZE && beforeC >= 0 && beforeC < SIZE && g[beforeR][beforeC] === 0;
+        const afterOpen = afterR >= 0 && afterR < SIZE && afterC >= 0 && afterC < SIZE && g[afterR][afterC] === 0;
+        if (!beforeOpen && !afterOpen) continue;
+        const openEnds = (beforeOpen ? 1 : 0) + (afterOpen ? 1 : 0);
+        score += patternScore(mine, openEnds);
+      }
+    }
+  }
+  return score;
+}
+
+function patternScore(count, openEnds) {
+  if (count >= 5) return 1000000;
+  if (count === 4) return openEnds === 2 ? 500000 : 50000;
+  if (count === 3) return openEnds === 2 ? 50000 : 5000;
+  if (count === 2) return openEnds === 2 ? 5000 : 500;
+  if (count === 1) return openEnds === 2 ? 500 : 50;
+  return 0;
+}
+
+function evaluate(aiColor) {
+  return scoreLine(grid, aiColor) - scoreLine(grid, 3 - aiColor) * 1.2;
+}
+
+function getCandidates(range) {
+  const candidates = new Set();
+  let hasStone = false;
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    if (grid[r][c]) {
+      hasStone = true;
+      for (let dr = -range; dr <= range; dr++) for (let dc = -range; dc <= range; dc++) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && grid[nr][nc] === 0) {
+          candidates.add(nr * SIZE + nc);
+        }
+      }
+    }
+  }
+  if (!hasStone) return [{ r: 7, c: 7 }];
+  return [...candidates].map(idx => ({ r: Math.floor(idx / SIZE), c: idx % SIZE }));
+}
+
+function quickScore(r, c, aiColor) {
+  grid[r][c] = aiColor;
+  const atk = scoreLine(grid, aiColor);
+  grid[r][c] = 3 - aiColor;
+  const def = scoreLine(grid, 3 - aiColor);
+  grid[r][c] = 0;
+  return atk + def;
+}
+
+function minimax(depth, alpha, beta, isMaximizing, aiColor) {
+  if (depth === 0) return evaluate(aiColor);
+  const candidates = getCandidates(1);
+  if (candidates.length === 0) return evaluate(aiColor);
+
+  candidates.sort((a, b) =>
+    quickScore(b.r, b.c, aiColor) - quickScore(a.r, a.c, aiColor)
+  );
+  const limit = depth >= 2 ? 12 : 20;
+  const moves = candidates.slice(0, limit);
+
+  if (isMaximizing) {
+    let maxEval = -Infinity;
+    for (const { r, c } of moves) {
+      grid[r][c] = aiColor;
+      if (checkWin(r, c, aiColor)) { grid[r][c] = 0; return 1000000 + depth; }
+      const ev = minimax(depth - 1, alpha, beta, false, aiColor);
+      grid[r][c] = 0;
+      maxEval = Math.max(maxEval, ev);
+      alpha = Math.max(alpha, ev);
+      if (beta <= alpha) break;
+    }
+    return maxEval;
+  } else {
+    const humanColor = 3 - aiColor;
+    let minEval = Infinity;
+    for (const { r, c } of moves) {
+      grid[r][c] = humanColor;
+      if (checkWin(r, c, humanColor)) { grid[r][c] = 0; return -1000000 - depth; }
+      const ev = minimax(depth - 1, alpha, beta, true, aiColor);
+      grid[r][c] = 0;
+      minEval = Math.min(minEval, ev);
+      beta = Math.min(beta, ev);
+      if (beta <= alpha) break;
+    }
+    return minEval;
+  }
+}
+
+function aiMove() {
+  const aiColor = getAiColor();
+  const diff = getDiff();
+  let depth, range;
+  if (diff === 'easy') { depth = 1; range = 2; }
+  else if (diff === 'medium') { depth = 2; range = 1; }
+  else { depth = 3; range = 1; }
+
+  const candidates = getCandidates(range);
+  let bestScore = -Infinity, bestMove = candidates[0];
+
+  for (const { r, c } of candidates) {
+    grid[r][c] = aiColor;
+    if (checkWin(r, c, aiColor)) { grid[r][c] = 0; bestMove = { r, c }; bestScore = Infinity; break; }
+    grid[r][c] = 0;
+  }
+  if (bestScore < Infinity) {
+    for (const { r, c } of candidates) {
+      grid[r][c] = 3 - aiColor;
+      if (checkWin(r, c, 3 - aiColor)) { grid[r][c] = 0; bestMove = { r, c }; break; }
+      grid[r][c] = 0;
+    }
+  }
+
+  if (bestScore < Infinity) {
+    candidates.sort((a, b) =>
+      quickScore(b.r, b.c, aiColor) - quickScore(a.r, a.c, aiColor)
+    );
+    const limit = diff === 'hard' ? 15 : (diff === 'medium' ? 12 : 10);
+    const moves = candidates.slice(0, limit);
+
+    for (const { r, c } of moves) {
+      grid[r][c] = aiColor;
+      if (checkWin(r, c, aiColor)) { grid[r][c] = 0; bestMove = { r, c }; break; }
+      const score = minimax(depth - 1, -Infinity, Infinity, false, aiColor);
+      grid[r][c] = 0;
+      if (score > bestScore) { bestScore = score; bestMove = { r, c }; }
+    }
+  }
+
+  aiThinking = false;
+  placeStone(bestMove.r, bestMove.c);
+}
+
+resetGame();
+</script>
+</body>
+</html>
