@@ -23,11 +23,11 @@
 .theme-a .theme-bar button { background: transparent; color: #8a7b6a; }
 .theme-a .theme-bar button.active { background: #5a3e2b; color: #f5f0e8; }
 .theme-a .theme-bar button:hover:not(.active) { background: rgba(90,62,43,0.08); }
-.theme-b .theme-bar { border: 1px solid #111; }
-.theme-b .theme-bar button { background: #fff; color: #999; border-right: 1px solid #eee; }
+.theme-b .theme-bar { border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+.theme-b .theme-bar button { background: #fff; color: #aaa; border-right: 1px solid #f0f0f0; }
 .theme-b .theme-bar button:last-child { border-right: none; }
-.theme-b .theme-bar button.active { background: #e63946; color: #fff; }
-.theme-b .theme-bar button:hover:not(.active) { background: #f5f5f5; color: #111; }
+.theme-b .theme-bar button.active { background: #111; color: #fff; }
+.theme-b .theme-bar button:hover:not(.active) { background: #f7f7f7; color: #333; }
 .theme-c .theme-bar { border: 1px solid rgba(123,47,247,0.3); background: rgba(15,15,26,0.9); }
 .theme-c .theme-bar button { background: transparent; color: #576574; }
 .theme-c .theme-bar button.active { background: linear-gradient(135deg, rgba(123,47,247,0.35), rgba(0,212,255,0.2)); color: #fff; }
@@ -72,7 +72,7 @@ body.theme-a {
 .theme-a .header { display: none; }
 
 /* ====== THEME B: 瑞士网格 ====== */
-body.theme-b { background: #fff; color: #111; font-family: 'Inter', 'Helvetica Neue', sans-serif; font-weight: 300; min-height: 100vh; display: flex; flex-direction: column; align-items: center; -webkit-font-smoothing: antialiased; }
+body.theme-b { background: #fafafa; color: #111; font-family: 'Inter', 'Helvetica Neue', sans-serif; font-weight: 300; min-height: 100vh; display: flex; flex-direction: column; align-items: center; -webkit-font-smoothing: antialiased; }
 .theme-b .title { display: none; }
 .theme-b .header { margin-top: 48px; margin-bottom: 40px; text-align: center; }
 .theme-b .header h1 { font-size: 56px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: #111; line-height: 1; }
@@ -82,26 +82,28 @@ body.theme-b { background: #fff; color: #111; font-family: 'Inter', 'Helvetica N
 .theme-b .board-container { position: relative; }
 .theme-b canvas { display: block; cursor: pointer; }
 .theme-b .controls, .theme-b .status { display: none; }
-.theme-b .side-panel { width: 220px; display: flex; flex-direction: column; gap: 0; }
-.theme-b .panel-section { border-top: 1px solid #111; padding: 16px 0; }
-.theme-b .panel-section:last-child { border-bottom: 1px solid #111; }
-.theme-b .panel-label { font-size: 9px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: #999; margin-bottom: 8px; }
+.theme-b .side-panel { width: 200px; display: flex; flex-direction: column; gap: 0; margin-top: 6px; }
+.theme-b .panel-section { padding: 20px 0; border-bottom: 1px solid #e5e5e5; }
+.theme-b .panel-section:first-child { border-top: 1px solid #e5e5e5; }
+.theme-b .panel-label { font-size: 9px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #aaa; margin-bottom: 14px; }
 .theme-b .panel-value { font-size: 14px; font-weight: 400; font-family: 'SF Mono', 'Fira Code', monospace; color: #111; }
 .theme-b .status-display { display: flex; align-items: center; gap: 10px; }
-.theme-b .status-stone { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+.theme-b .status-stone { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
 .theme-b .status-stone.black { background: #111; }
-.theme-b .status-stone.white { background: #fff; border: 1px solid #111; }
-.theme-b .control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.theme-b .status-stone.white { background: #fff; border: 1px solid #ddd; box-shadow: 0 0 0 1px rgba(0,0,0,0.04); }
+.theme-b .control-row { margin-bottom: 12px; }
 .theme-b .control-row:last-child { margin-bottom: 0; }
-.theme-b .control-row label { font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: #999; }
-.theme-b .control-row select { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 400; padding: 4px 8px; border: 1px solid #111; background: #fff; color: #111; cursor: pointer; outline: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23111' fill='none' stroke-width='1'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; padding-right: 24px; }
-.theme-b .control-row select:hover { border-color: #e63946; }
-.theme-b .btn { display: block; width: 100%; padding: 10px 0; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; border: 1px solid #111; background: #fff; color: #111; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; text-align: center; }
-.theme-b .btn:hover { background: #e63946; color: #fff; border-color: #e63946; }
-.theme-b .stats-grid { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: baseline; }
-.theme-b .stat-label { font-size: 10px; font-weight: 400; color: #999; letter-spacing: 0.05em; }
-.theme-b .stat-value { font-size: 13px; font-weight: 500; font-family: 'SF Mono', 'Fira Code', monospace; text-align: right; color: #111; }
-.theme-b .footer { margin-top: 48px; margin-bottom: 32px; font-size: 9px; font-weight: 300; letter-spacing: 0.15em; text-transform: uppercase; color: #999; }
+.theme-b .control-row label { display: block; font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: #aaa; margin-bottom: 6px; }
+.theme-b .control-row select { display: block; width: 100%; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 400; padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 6px; background: #fff; color: #111; cursor: pointer; outline: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23aaa' fill='none' stroke-width='1.2'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; transition: border-color 0.2s, box-shadow 0.2s; }
+.theme-b .control-row select:hover { border-color: #bbb; }
+.theme-b .control-row select:focus { border-color: #e63946; box-shadow: 0 0 0 2px rgba(230,57,70,0.08); }
+.theme-b .btn { display: block; width: 100%; padding: 10px 0; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0.1em; border: none; border-radius: 6px; background: #111; color: #fff; cursor: pointer; transition: background 0.2s, transform 0.1s; text-align: center; }
+.theme-b .btn:hover { background: #e63946; }
+.theme-b .btn:active { transform: scale(0.97); }
+.theme-b .stats-grid { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; align-items: baseline; }
+.theme-b .stat-label { font-size: 11px; font-weight: 400; color: #bbb; letter-spacing: 0.02em; }
+.theme-b .stat-value { font-size: 13px; font-weight: 500; font-family: 'SF Mono', 'Fira Code', monospace; text-align: right; color: #333; }
+.theme-b .footer { margin-top: 48px; margin-bottom: 32px; font-size: 9px; font-weight: 300; letter-spacing: 0.15em; text-transform: uppercase; color: #ccc; }
 
 /* ====== THEME C: 现代科技 ====== */
 body.theme-c { display: flex; flex-direction: column; align-items: center; min-height: 100vh; background: #0f0f1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #c8d6e5; overflow-x: hidden; background-image: radial-gradient(ellipse at 20% 50%, rgba(123,47,247,0.04) 0%, transparent 50%), radial-gradient(ellipse at 80% 50%, rgba(0,212,255,0.04) 0%, transparent 50%); }
