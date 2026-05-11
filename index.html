@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>五子棋</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; background: #1a1a2e; font-family: 'Segoe UI', sans-serif;
+    color: #eee;
+  }
+  h1 { margin-bottom: 12px; font-size: 28px; letter-spacing: 4px; color: #e0c097; }
+  #controls {
+    display: flex; gap: 12px; margin-bottom: 14px; align-items: center; flex-wrap: wrap;
+    justify-content: center;
+  }
+  #controls select, #controls label {
+    font-size: 15px; padding: 6px 10px; border-radius: 6px;
+    border: 1px solid #555; background: #2a2a4a; color: #eee; cursor: pointer;
+  }
+  #controls label { border: none; padding: 6px 4px; }
+  #status {
+    margin-bottom: 14px; font-size: 18px; height: 30px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .stone-icon {
+    width: 20px; height: 20px; border-radius: 50%; display: inline-block;
+    vertical-align: middle; border: 1px solid #555;
+  }
+  .stone-icon.black { background: radial-gradient(circle at 35% 35%, #555, #111); }
+  .stone-icon.white { background: radial-gradient(circle at 35% 35%, #fff, #bbb); }
+  #board-wrap {
+    position: relative; padding: 24px;
+    background: #c8a45c; border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  canvas { display: block; cursor: pointer; }
+  button {
+    margin-top: 16px; padding: 10px 32px; font-size: 16px;
+    border: none; border-radius: 6px; cursor: pointer;
+    background: #e0c097; color: #1a1a2e; font-weight: bold;
+    transition: background 0.2s;
+  }
+  button:hover { background: #d4a76a; }
+</style>
+</head>
+<body>
+<h1>五 子 棋</h1>
+<div id="controls">
+  <select id="modeSelect" onchange="resetGame()">
+    <option value="pvp">双人对战</option>
+    <option value="pvc" selected>人机对战</option>
+  </select>
+  <select id="diffSelect" onchange="resetGame()">
+    <option value="easy">简单</option>
+    <option value="medium" selected>普通</option>
+    <option value="hard">困难</option>
+  </select>
+  <select id="colorSelect" onchange="resetGame()">
+    <option value="1" selected>执黑先手</option>
+    <option value="2">执白后手</option>
+  </select>
+</div>
+<div id="status"><span class="stone-icon black"></span> 黑方落子</div>
+<div id="board-wrap"><canvas id="board"></canvas></div>
+<button onclick="resetGame()">重新开始</button>
+
+<script>
+const SIZE = 15, CELL = 36, PAD = 20, STONE_R = 15;
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const total = CELL * (SIZE - 1) + PAD * 2;
+canvas.width = canvas.height = total;
+
+let grid, currentPlayer, gameOver, winLine, hover, aiThinking;
+
+function getMode() { return document.getElementById('modeSelect').value; }
+function getDiff() { return document.getElementById('diffSelect').value; }
+function getPlayerColor() { return +document.getElementById('colorSelect').value; }
+function getAiColor() { return 3 - getPlayerColor(); }
+
+function resetGame() {
+  grid = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+  currentPlayer = 1; gameOver = false; winLine = null; hover = null; aiThinking = false;
+  updateModeUI();
+  updateStatus();
+  draw();
+  // if AI goes first
+  if (getMode() === 'pvc' && getAiColor() === 1) {
+    aiThinking = true;
+    setTimeout(aiMove, 300);
+  }
+}
+
+function updateModeUI() {
+  const isPvc = getMode() === 'pvc';
+  document.getElementById('diffSelect').style.display = isPvc ? '' : 'none';
+  document.getElementById('colorSelect').style.display = isPvc ? '' : 'none';
+}
+
+function updateStatus(msg) {
+  const el = document.getElementById('status');
+  if (msg) { el.innerHTML = msg; return; }
+  const cls = currentPlayer === 1 ? 'black' : 'white';
+  const name = currentPlayer === 1 ? '黑方' : '白方';
+  el.innerHTML = `<span class="stone-icon ${cls}"></span> ${name}落子`;
+}
+
+function draw() {
+  ctx.fillStyle = '#c8a45c';
+  ctx.fillRect(0, 0, total, total);
+  ctx.strokeStyle = '#6b4f2e'; ctx.lineWidth = 1;
+  for (let i = 0; i < SIZE; i++) {
+    const p = PAD + i * CELL;
+    ctx.beginPath(); ctx.moveTo(PAD, p); ctx.lineTo(PAD + (SIZE-1) * CELL, p); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p, PAD); ctx.lineTo(p, PAD + (SIZE-1) * CELL); ctx.stroke();
+  }
+  const stars = [3, 7, 11];
+  ctx.fillStyle = '#6b4f2e';
+  for (const r of stars) for (const c of stars) {
+    ctx.beginPath(); ctx.arc(PAD + c * CELL, PAD + r * CELL, 3.5, 0, Math.PI * 2); ctx.fill();
+  }
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    if (grid[r][c]) drawStone(r, c, grid[r][c]);
+  }
+  if (hover && !gameOver && !aiThinking && grid[hover.r][hover.c] === 0) {
+    const isPvc = getMode() === 'pvc';
+    const showHover = !isPvc || currentPlayer === getPlayerColor();
+    if (showHover) {
+      ctx.globalAlpha = 0.35;
+      drawStone(hover.r, hover.c, currentPlayer);
+      ctx.globalAlpha = 1;
+    }
+  }
+  if (winLine) {
+    ctx.strokeStyle = '#ff4444'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    const a = winLine[0], b = winLine[winLine.length - 1];
+    ctx.beginPath();
+    ctx.moveTo(PAD + a.c * CELL, PAD + a.r * CELL);
+    ctx.lineTo(PAD + b.c * CELL, PAD + b.r * CELL);
+    ctx.stroke();
+  }
+}
+
+function drawStone(r, c, player) {
+  const x = PAD + c * CELL, y = PAD + r * CELL;
+  ctx.beginPath(); ctx.arc(x, y, STONE_R, 0, Math.PI * 2);
+  const grad = ctx.createRadialGradient(x - 4, y - 4, 2, x, y, STONE_R);
+  if (player === 1) {
+    grad.addColorStop(0, '#666'); grad.addColorStop(1, '#111');
+  } else {
+    grad.addColorStop(0, '#fff'); grad.addColorStop(1, '#aaa');
+  }
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.strokeStyle = player === 1 ? '#000' : '#888'; ctx.lineWidth = 0.5; ctx.stroke();
+}
+
+function toGrid(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+  const c = Math.round((mx - PAD) / CELL);
+  const r = Math.round((my - PAD) / CELL);
+  if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) return null;
+  return { r, c };
+}
+
+canvas.addEventListener('mousemove', e => {
+  const g = toGrid(e);
+  if ((!g && !hover) || (g && hover && g.r === hover.r && g.c === hover.c)) return;
+  hover = g; draw();
+});
+canvas.addEventListener('mouseleave', () => { hover = null; draw(); });
+
+canvas.addEventListener('click', e => {
+  if (gameOver || aiThinking) return;
+  const g = toGrid(e);
+  if (!g || grid[g.r][g.c]) return;
+  // in PvC, only allow clicking on player's turn
+  if (getMode() === 'pvc' && currentPlayer !== getPlayerColor()) return;
+  placeStone(g.r, g.c);
+});
+
+function placeStone(r, c) {
+  grid[r][c] = currentPlayer;
+  const win = checkWin(r, c, currentPlayer);
+  if (win) {
+    gameOver = true; winLine = win;
+    const name = currentPlayer === 1 ? '黑方' : '白方';
+    const cls = currentPlayer === 1 ? 'black' : 'white';
+    const extra = (getMode() === 'pvc' && currentPlayer === getAiColor()) ? '（电脑）' : '';
+    updateStatus(`<span class="stone-icon ${cls}"></span> ${name}${extra}获胜！`);
+  } else if (isBoardFull()) {
+    gameOver = true;
+    updateStatus('平局！');
+  } else {
+    currentPlayer = 3 - currentPlayer;
+  }
+  draw();
+  if (!gameOver && getMode() === 'pvc' && currentPlayer === getAiColor()) {
+    aiThinking = true;
+    setTimeout(aiMove, 200);
+  }
+}
+
+// ========== AI ==========
+const DIRS = [[0,1],[1,0],[1,1],[1,-1]];
+
+function checkWin(r, c, p) {
+  for (const [dr, dc] of DIRS) {
+    let cells = [{ r, c }];
+    for (const sign of [1, -1]) {
+      let nr = r + dr * sign, nc = c + dc * sign;
+      while (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && grid[nr][nc] === p) {
+        if (sign === 1) cells.push({ r: nr, c: nc }); else cells.unshift({ r: nr, c: nc });
+        nr += dr * sign; nc += dc * sign;
+      }
+    }
+    if (cells.length >= 5) return cells;
+  }
+  return null;
+}
+
+function isBoardFull() {
+  return grid.every(row => row.every(v => v !== 0));
+}
+
+// Score patterns for a given player
+// Returns [score, count] for each pattern type
+function scoreLine(line, p) {
+  const opp = 3 - p;
+  let score = 0;
+  for (const [dr, dc] of DIRS) {
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        // check if this direction has a line starting here
+        let mine = 0, open = 0, blocked = false;
+        for (let i = 0; i < 5; i++) {
+          const nr = r + dr * i, nc = c + dc * i;
+          if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) { blocked = true; break; }
+          if (grid[nr][nc] === p) mine++;
+          else if (grid[nr][nc] === opp) { blocked = true; break; }
+        }
+        if (blocked || mine === 0) continue;
+        // check openness at both ends
+        const beforeR = r - dr, beforeC = c - dc;
+        const afterR = r + dr * 5, afterC = c + dc * 5;
+        const beforeOpen = beforeR >= 0 && beforeR < SIZE && beforeC >= 0 && beforeC < SIZE && grid[beforeR][beforeC] === 0;
+        const afterOpen = afterR >= 0 && afterR < SIZE && afterC >= 0 && afterC < SIZE && grid[afterR][afterC] === 0;
+        if (!beforeOpen && !afterOpen) continue; // fully blocked
+        const openEnds = (beforeOpen ? 1 : 0) + (afterOpen ? 1 : 0);
+        score += patternScore(mine, openEnds);
+      }
+    }
+  }
+  return score;
+}
+
+function patternScore(count, openEnds) {
+  if (count >= 5) return 1000000;
+  if (count === 4) return openEnds === 2 ? 500000 : 50000;
+  if (count === 3) return openEnds === 2 ? 50000 : 5000;
+  if (count === 2) return openEnds === 2 ? 5000 : 500;
+  if (count === 1) return openEnds === 2 ? 500 : 50;
+  return 0;
+}
+
+function evaluate(aiColor) {
+  const humanColor = 3 - aiColor;
+  return scoreLine(grid, aiColor) - scoreLine(grid, humanColor) * 1.2;
+}
+
+// Get candidate moves: empty cells near existing stones
+function getCandidates(range) {
+  const candidates = new Set();
+  let hasStone = false;
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    if (grid[r][c]) {
+      hasStone = true;
+      for (let dr = -range; dr <= range; dr++) for (let dc = -range; dc <= range; dc++) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && grid[nr][nc] === 0) {
+          candidates.add(nr * SIZE + nc);
+        }
+      }
+    }
+  }
+  if (!hasStone) return [{ r: 7, c: 7 }]; // first move center
+  return [...candidates].map(idx => ({ r: Math.floor(idx / SIZE), c: idx % SIZE }));
+}
+
+// Quick score for move ordering
+function quickScore(r, c, aiColor) {
+  grid[r][c] = aiColor;
+  const atk = scoreLine(grid, aiColor);
+  grid[r][c] = 3 - aiColor;
+  const def = scoreLine(grid, 3 - aiColor);
+  grid[r][c] = 0;
+  return atk + def;
+}
+
+// Minimax with alpha-beta
+function minimax(depth, alpha, beta, isMaximizing, aiColor) {
+  if (depth === 0) return evaluate(aiColor);
+  const candidates = getCandidates(1);
+  if (candidates.length === 0) return evaluate(aiColor);
+
+  // sort by quick score for better pruning
+  candidates.sort((a, b) =>
+    quickScore(b.r, b.c, aiColor) - quickScore(a.r, a.c, aiColor)
+  );
+  // limit candidates for speed
+  const limit = depth >= 2 ? 12 : 20;
+  const moves = candidates.slice(0, limit);
+
+  if (isMaximizing) {
+    let maxEval = -Infinity;
+    for (const { r, c } of moves) {
+      grid[r][c] = aiColor;
+      if (checkWin(r, c, aiColor)) { grid[r][c] = 0; return 1000000 + depth; }
+      const ev = minimax(depth - 1, alpha, beta, false, aiColor);
+      grid[r][c] = 0;
+      maxEval = Math.max(maxEval, ev);
+      alpha = Math.max(alpha, ev);
+      if (beta <= alpha) break;
+    }
+    return maxEval;
+  } else {
+    const humanColor = 3 - aiColor;
+    let minEval = Infinity;
+    for (const { r, c } of moves) {
+      grid[r][c] = humanColor;
+      if (checkWin(r, c, humanColor)) { grid[r][c] = 0; return -1000000 - depth; }
+      const ev = minimax(depth - 1, alpha, beta, true, aiColor);
+      grid[r][c] = 0;
+      minEval = Math.min(minEval, ev);
+      beta = Math.min(beta, ev);
+      if (beta <= alpha) break;
+    }
+    return minEval;
+  }
+}
+
+function aiMove() {
+  const aiColor = getAiColor();
+  const diff = getDiff();
+  let depth, range;
+  if (diff === 'easy') { depth = 1; range = 2; }
+  else if (diff === 'medium') { depth = 2; range = 1; }
+  else { depth = 3; range = 1; }
+
+  const candidates = getCandidates(range);
+  let bestScore = -Infinity, bestMove = candidates[0];
+
+  // check instant win or block
+  for (const { r, c } of candidates) {
+    grid[r][c] = aiColor;
+    if (checkWin(r, c, aiColor)) { grid[r][c] = 0; bestMove = { r, c }; bestScore = Infinity; break; }
+    grid[r][c] = 0;
+  }
+  if (bestScore < Infinity) {
+    for (const { r, c } of candidates) {
+      grid[r][c] = 3 - aiColor;
+      if (checkWin(r, c, 3 - aiColor)) { grid[r][c] = 0; bestMove = { r, c }; break; }
+      grid[r][c] = 0;
+    }
+  }
+
+  // if no instant win/block, use minimax
+  if (bestScore < Infinity) {
+    // sort candidates for better initial ordering
+    candidates.sort((a, b) =>
+      quickScore(b.r, b.c, aiColor) - quickScore(a.r, a.c, aiColor)
+    );
+    const limit = diff === 'hard' ? 15 : (diff === 'medium' ? 12 : 10);
+    const moves = candidates.slice(0, limit);
+
+    for (const { r, c } of moves) {
+      grid[r][c] = aiColor;
+      if (checkWin(r, c, aiColor)) { grid[r][c] = 0; bestMove = { r, c }; break; }
+      const score = minimax(depth - 1, -Infinity, Infinity, false, aiColor);
+      grid[r][c] = 0;
+      if (score > bestScore) { bestScore = score; bestMove = { r, c }; }
+    }
+  }
+
+  aiThinking = false;
+  placeStone(bestMove.r, bestMove.c);
+}
+
+resetGame();
+</script>
+</body>
+</html>
