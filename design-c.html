@@ -173,13 +173,13 @@
 
   /* Win animation overlay */
   @keyframes winPulse {
-    0% { box-shadow: 0 0 20px rgba(0,212,255,0.2), 0 0 40px rgba(123,47,247,0.1); }
-    50% { box-shadow: 0 0 40px rgba(0,212,255,0.4), 0 0 80px rgba(123,47,247,0.25); }
-    100% { box-shadow: 0 0 20px rgba(0,212,255,0.2), 0 0 40px rgba(123,47,247,0.1); }
+    0% { box-shadow: 0 0 30px rgba(0,212,255,0.3), 0 0 60px rgba(123,47,247,0.15), inset 0 0 20px rgba(0,212,255,0.05); }
+    50% { box-shadow: 0 0 60px rgba(0,212,255,0.5), 0 0 120px rgba(123,47,247,0.3), 0 0 180px rgba(0,212,255,0.1), inset 0 0 40px rgba(123,47,247,0.1); }
+    100% { box-shadow: 0 0 30px rgba(0,212,255,0.3), 0 0 60px rgba(123,47,247,0.15), inset 0 0 20px rgba(0,212,255,0.05); }
   }
   #board-wrap.winning {
-    animation: winPulse 0.8s ease-in-out 3;
-    border-color: rgba(0,212,255,0.4);
+    animation: winPulse 0.6s ease-in-out infinite;
+    border-color: rgba(0,212,255,0.6);
   }
 
   /* Hidden class */
@@ -225,6 +225,16 @@ canvas.width = canvas.height = total;
 let grid, currentPlayer, gameOver, winLine, hover, aiThinking, moveCount;
 let winAnimFrame = 0;
 
+/* ====== Victory FX State ====== */
+let winStartTime = 0;
+const WIN_INTENSE_MS = 3500; // intense phase duration
+let particles = [];
+let shockwaves = [];
+let energyPulses = [];
+let shakeX = 0, shakeY = 0;
+let shakeDecay = 0;
+let lastFrameTime = 0;
+
 function getMode() {
   return document.getElementById('modePvc').checked ? 'pvc' : 'pvp';
 }
@@ -241,7 +251,10 @@ function resetGame() {
   grid = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
   currentPlayer = 1; gameOver = false; winLine = null; hover = null; aiThinking = false;
   moveCount = 0; winAnimFrame = 0;
+  winStartTime = 0; particles = []; shockwaves = []; energyPulses = [];
+  shakeX = 0; shakeY = 0; shakeDecay = 0;
   document.getElementById('board-wrap').classList.remove('winning');
+  document.getElementById('board-wrap').style.boxShadow = '';
   updateModeUI();
   updateStatus();
   updateInfo();
@@ -274,6 +287,19 @@ function updateInfo() {
 /* ========== Drawing ========== */
 
 function draw() {
+  const now = Date.now();
+  const dt = Math.min(now - lastFrameTime, 100); // cap dt to avoid huge jumps
+  lastFrameTime = now;
+
+  // Apply screen shake
+  ctx.save();
+  if (shakeDecay > 0) {
+    ctx.translate(shakeX, shakeY);
+    shakeX *= 0.88; shakeY *= 0.88;
+    shakeDecay *= 0.92;
+    if (shakeDecay < 0.3) { shakeX = 0; shakeY = 0; shakeDecay = 0; }
+  }
+
   // Board background
   ctx.fillStyle = '#1a1a2e';
   ctx.fillRect(0, 0, total, total);
@@ -331,43 +357,84 @@ function draw() {
     }
   }
 
-  // Win line
+  /* ====== VICTORY EFFECTS ====== */
   if (winLine) {
+    const elapsed = now - winStartTime;
+    const intense = elapsed < WIN_INTENSE_MS;
+    const intensity = intense ? 1 - (elapsed / WIN_INTENSE_MS) * 0.7 : 0.3;
     const a = winLine[0], b = winLine[winLine.length - 1];
     const x1 = PAD + a.c * CELL, y1 = PAD + a.r * CELL;
     const x2 = PAD + b.c * CELL, y2 = PAD + b.r * CELL;
 
-    // animated glow
+    // -- Shockwave rings --
+    updateShockwaves(dt);
+    drawShockwaves();
+
+    // -- Lightning arc along win line --
+    if (intense) {
+      drawLightningArc(x1, y1, x2, y2, intensity);
+    }
+
+    // Win line glow
     const pulse = 0.6 + 0.4 * Math.sin(Date.now() / 200);
     ctx.save();
-    ctx.shadowColor = `rgba(0,212,255,${0.6 * pulse})`;
-    ctx.shadowBlur = 15 * pulse;
-    ctx.strokeStyle = `rgba(0,212,255,${0.5 + 0.3 * pulse})`;
-    ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.shadowColor = `rgba(0,212,255,${0.6 * pulse * intensity})`;
+    ctx.shadowBlur = 20 * pulse * intensity;
+    ctx.strokeStyle = `rgba(0,212,255,${(0.5 + 0.3 * pulse) * intensity})`;
+    ctx.lineWidth = 4 + intensity * 2; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     ctx.restore();
 
     // solid core line
     ctx.save();
-    ctx.strokeStyle = '#00d4ff'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.strokeStyle = `rgba(0,212,255,${0.6 + 0.4 * intensity})`; ctx.lineWidth = 2; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     ctx.restore();
 
-    // highlight winning stones
+    // -- Energy pulses from winning stones --
+    updateEnergyPulses(dt);
+    drawEnergyPulses();
+
+    // -- Highlight winning stones --
     for (const cell of winLine) {
       const cx = PAD + cell.c * CELL, cy = PAD + cell.r * CELL;
       ctx.save();
-      ctx.shadowColor = `rgba(0,212,255,${0.8 * pulse})`;
-      ctx.shadowBlur = 12 * pulse;
-      ctx.beginPath(); ctx.arc(cx, cy, STONE_R + 2, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(0,212,255,${0.5 * pulse})`;
-      ctx.lineWidth = 2; ctx.stroke();
+      ctx.shadowColor = `rgba(0,212,255,${0.8 * pulse * intensity})`;
+      ctx.shadowBlur = 15 * pulse * intensity;
+      ctx.beginPath(); ctx.arc(cx, cy, STONE_R + 2 + intensity * 2, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(0,212,255,${(0.5 + 0.3 * pulse) * intensity})`;
+      ctx.lineWidth = 2 + intensity; ctx.stroke();
       ctx.restore();
+    }
+
+    // -- Particles --
+    updateParticles(dt);
+    drawParticles();
+
+    // -- VICTORY text with glitch --
+    if (intense) {
+      drawVictoryText(elapsed, intensity);
+    }
+
+    // -- Border pulse enhancement --
+    if (intense) {
+      const borderPulse = 0.5 + 0.5 * Math.sin(elapsed / 120);
+      const glow1 = 20 + 30 * borderPulse * intensity;
+      const glow2 = 40 + 60 * borderPulse * intensity;
+      const wrap = document.getElementById('board-wrap');
+      wrap.style.boxShadow = `
+        0 0 ${glow1}px rgba(0,212,255,${0.3 * borderPulse * intensity}),
+        0 0 ${glow2}px rgba(123,47,247,${0.2 * borderPulse * intensity}),
+        0 0 ${glow2 * 1.5}px rgba(0,212,255,${0.1 * borderPulse * intensity}),
+        0 8px 32px rgba(0,0,0,0.6)
+      `;
     }
 
     // continue animation
     winAnimFrame = requestAnimationFrame(draw);
   }
+
+  ctx.restore(); // end shake
 }
 
 function drawStone(r, c, player) {
@@ -406,6 +473,243 @@ function drawStone(r, c, player) {
   ctx.ellipse(x - 3, y - 4, 4, 2.5, -0.4, 0, Math.PI * 2);
   ctx.fillStyle = player === 1 ? 'rgba(200,160,255,0.25)' : 'rgba(255,255,255,0.35)';
   ctx.fill();
+
+  ctx.restore();
+}
+
+/* ====== Victory FX Functions ====== */
+
+function initVictoryFX(win) {
+  winStartTime = Date.now();
+  lastFrameTime = winStartTime;
+  particles = [];
+  shockwaves = [];
+  energyPulses = [];
+
+  // Spawn particles from each winning stone
+  for (const cell of win) {
+    const cx = PAD + cell.c * CELL, cy = PAD + cell.r * CELL;
+    for (let i = 0; i < 35; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 40 + Math.random() * 120;
+      const isPurple = Math.random() < 0.5;
+      particles.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        decay: 0.008 + Math.random() * 0.012,
+        size: 1.5 + Math.random() * 3,
+        color: isPurple ? '#7b2ff7' : '#00d4ff',
+        trail: []
+      });
+    }
+  }
+
+  // Shockwave rings from board center
+  const cx = total / 2, cy = total / 2;
+  for (let i = 0; i < 4; i++) {
+    shockwaves.push({
+      x: cx, y: cy,
+      radius: 10,
+      maxRadius: total * 0.55,
+      speed: 80 + i * 25,
+      life: 1,
+      delay: i * 180, // staggered start
+      started: false,
+      color: i % 2 === 0 ? '0,212,255' : '123,47,247'
+    });
+  }
+
+  // Energy pulses from each winning stone
+  for (const cell of win) {
+    const cx = PAD + cell.c * CELL, cy = PAD + cell.r * CELL;
+    for (let i = 0; i < 3; i++) {
+      energyPulses.push({
+        x: cx, y: cy,
+        radius: STONE_R,
+        maxRadius: STONE_R + 30 + i * 10,
+        speed: 25 + i * 8,
+        life: 1,
+        delay: i * 350,
+        started: false
+      });
+    }
+  }
+
+  // Screen shake
+  shakeDecay = 5;
+  shakeX = (Math.random() - 0.5) * 8;
+  shakeY = (Math.random() - 0.5) * 8;
+}
+
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    // Add to trail
+    p.trail.push({ x: p.x, y: p.y, life: p.life });
+    if (p.trail.length > 8) p.trail.shift();
+    // Update position
+    p.x += p.vx * (dt / 1000);
+    p.y += p.vy * (dt / 1000);
+    // Gravity-like curve + drag
+    p.vy += 30 * (dt / 1000);
+    p.vx *= 0.995;
+    p.life -= p.decay;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    // Draw trail
+    for (let t = 0; t < p.trail.length; t++) {
+      const tp = p.trail[t];
+      const trailAlpha = (t / p.trail.length) * p.life * 0.4;
+      ctx.beginPath();
+      ctx.arc(tp.x, tp.y, p.size * (t / p.trail.length) * 0.6, 0, Math.PI * 2);
+      ctx.fillStyle = p.color === '#7b2ff7'
+        ? `rgba(123,47,247,${trailAlpha})`
+        : `rgba(0,212,255,${trailAlpha})`;
+      ctx.fill();
+    }
+    // Draw particle
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fillStyle = p.color;
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function updateShockwaves(dt) {
+  for (let i = 0; i < shockwaves.length; i++) {
+    const s = shockwaves[i];
+    if (!s.started) {
+      s.delay -= dt;
+      if (s.delay <= 0) s.started = true;
+      continue;
+    }
+    s.radius += s.speed * (dt / 1000);
+    s.life = 1 - (s.radius / s.maxRadius);
+    if (s.life <= 0) { shockwaves.splice(i, 1); i--; }
+  }
+}
+
+function drawShockwaves() {
+  for (const s of shockwaves) {
+    if (!s.started) continue;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(${s.color},${s.life * 0.5})`;
+    ctx.lineWidth = 2 + s.life * 2;
+    ctx.shadowColor = `rgba(${s.color},${s.life * 0.6})`;
+    ctx.shadowBlur = 15 * s.life;
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function updateEnergyPulses(dt) {
+  for (let i = 0; i < energyPulses.length; i++) {
+    const ep = energyPulses[i];
+    if (!ep.started) {
+      ep.delay -= dt;
+      if (ep.delay <= 0) ep.started = true;
+      continue;
+    }
+    ep.radius += ep.speed * (dt / 1000);
+    ep.life = 1 - ((ep.radius - STONE_R) / (ep.maxRadius - STONE_R));
+    if (ep.life <= 0) { energyPulses.splice(i, 1); i--; }
+  }
+}
+
+function drawEnergyPulses() {
+  for (const ep of energyPulses) {
+    if (!ep.started) continue;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ep.x, ep.y, ep.radius, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(0,212,255,${ep.life * 0.6})`;
+    ctx.lineWidth = 1.5 * ep.life;
+    ctx.shadowColor = `rgba(0,212,255,${ep.life * 0.5})`;
+    ctx.shadowBlur = 10 * ep.life;
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawLightningArc(x1, y1, x2, y2, intensity) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  const nx = -dy / len, ny = dx / len; // perpendicular
+
+  // Draw 2-3 lightning bolts along the line
+  const numBolts = 3;
+  ctx.save();
+  ctx.shadowColor = `rgba(0,212,255,${0.8 * intensity})`;
+  ctx.shadowBlur = 12;
+  ctx.strokeStyle = `rgba(200,240,255,${0.7 * intensity})`;
+  ctx.lineWidth = 1.5;
+
+  for (let b = 0; b < numBolts; b++) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    const segments = 8 + Math.floor(Math.random() * 5);
+    for (let s = 1; s <= segments; s++) {
+      const t = s / segments;
+      const px = x1 + dx * t;
+      const py = y1 + dy * t;
+      // random jitter perpendicular to line
+      const jitter = (Math.random() - 0.5) * 18 * intensity;
+      ctx.lineTo(px + nx * jitter, py + ny * jitter);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawVictoryText(elapsed, intensity) {
+  const cx = total / 2;
+  const cy = total / 2;
+
+  // Glitch flicker
+  const glitch = Math.random() < 0.08 && elapsed > 300;
+  const offsetX = glitch ? (Math.random() - 0.5) * 6 : 0;
+  const offsetY = glitch ? (Math.random() - 0.5) * 4 : 0;
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+
+  // Main text glow
+  ctx.shadowColor = `rgba(0,212,255,${0.9 * intensity})`;
+  ctx.shadowBlur = 30;
+  ctx.fillStyle = `rgba(200,240,255,${intensity})`;
+  ctx.fillText('VICTORY', cx + offsetX, cy + offsetY);
+
+  // Glitch layers (shifted color channels)
+  if (glitch) {
+    ctx.globalAlpha = 0.6 * intensity;
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(123,47,247,0.8)';
+    ctx.fillText('VICTORY', cx + offsetX + 3, cy + offsetY);
+    ctx.fillStyle = 'rgba(0,212,255,0.8)';
+    ctx.fillText('VICTORY', cx + offsetX - 3, cy + offsetY);
+  }
+
+  // Scanline overlay on text
+  ctx.globalAlpha = 0.08 * intensity;
+  for (let y = cy - 30; y < cy + 30; y += 3) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(cx - 100, y, 200, 1);
+  }
 
   ctx.restore();
 }
@@ -461,6 +765,8 @@ function placeStone(r, c) {
     const extra = (getMode() === 'pvc' && currentPlayer === getAiColor()) ? '（电脑）' : '';
     updateStatus(`<span class="stone-icon ${cls}"></span> ${name}${extra}获胜！`);
     document.getElementById('board-wrap').classList.add('winning');
+    // Trigger victory FX
+    initVictoryFX(win);
   } else if (isBoardFull()) {
     gameOver = true;
     updateStatus('平局！');
