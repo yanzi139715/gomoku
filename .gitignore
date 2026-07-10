@@ -1,0 +1,10 @@
+# 禁止上传清单：这些文件永远不许传到 GitHub（防止密钥/隐私误上传）
+.env
+.env.*
+*.local
+credentials*
+*秘密*
+.DS_Store
+node_modules/
+.claude/settings.local.json
+.codegraph/
