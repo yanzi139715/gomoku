@@ -148,11 +148,12 @@ function setStatus(){const el=document.getElementById('status');el.classList.tog
   else el.textContent='平局';
   const h=human();document.getElementById('undo').disabled=!(mode==='pvc'?moves.some(m=>m.p===h):moves.length)}
 function reset(){
+  if(moves&&moves.length)sfx('pearlGather',.8,1);
   gid++;grid=Array.from({length:SIZE},()=>Array(SIZE).fill(0));cur=1;over=false;winLine=null;hover=null;touchPending=null;busy=false;moves=[];winT=0;parts=[];
   setStatus();kick();
   if(mode==='pvc'&&aiColor()===1)thinkThen()}
 function place(r,c){
-  touchPending=null;grid[r][c]=cur;moves.push({r,c,p:cur,t:performance.now()});setTimeout(clack,90);
+  touchPending=null;grid[r][c]=cur;moves.push({r,c,p:cur,t:performance.now()});{const p=cur;setTimeout(()=>clack(p),150)}
   const w=checkWin(r,c,cur);
   if(w){over=true;winLine=w.slice(0,5);winT=performance.now();chime();winLine.forEach((x,i)=>setTimeout(()=>{if(winLine){const p=P(x.r,x.c);spawnPetals(p.x,p.y,i===0);kick()}},i*120))}
   else if(moves.length===SIZE*SIZE)over=true;
@@ -174,10 +175,11 @@ const POOL={},unlocked={v:false};
 function pool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
 function sfx(f,vol,rate){if(!soundOn)return;const ps=pool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
 // iPhone 要求声音第一次由手指触发：第一次点击时把所有声音静音播一下，之后电脑落子也能出声
-function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlTap','musicbox'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
 addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
-function clack(){sfx('pearlTap',.6,.94+Math.random()*.14)}
-function chime(){[1,1.25,1.5,2,2.5].forEach((r,i)=>setTimeout(()=>sfx('musicbox',.7,r*.75),250+i*150))}
+// 落子：珠子落地后的一下小弹跳，五个里随机挑；墨莓低一点、珍珠高一点；150ms 对准珍珠落到纸面的那一刻
+function clack(p){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),.8,(p===1?.95:1.04)+(Math.random()-.5)*.04)}
+function chime(){} // 胜利/失败声还在挑，暂时只有樱花飘落
 function syncSound(){document.getElementById('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}
 
 // ================= 悔棋：和电脑下时退回到你上一步之前 =================
@@ -185,7 +187,7 @@ function undo(){if(!moves.length)return;
   if(mode==='pvc'){const h=human();if(!moves.some(m=>m.p===h))return;while(moves[moves.length-1].p!==h)moves.pop();moves.pop();cur=h}
   else cur=moves.pop().p;
   gid++;busy=false;grid=Array.from({length:SIZE},()=>Array(SIZE).fill(0));for(const m of moves){grid[m.r][m.c]=m.p;m.t=0}
-  over=false;winLine=null;winT=0;parts=[];touchPending=null;hover=null;setStatus();kick()}
+  over=false;winLine=null;winT=0;parts=[];touchPending=null;hover=null;sfx('pearlPick',.7,1);setStatus();kick()}
 
 // ================= 电脑（沿用原版 AI 与难度） =================
 function scoreLine(p){let score=0;const opp=3-p;for(const[dr,dc]of DIRS)for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){let mine=0,blocked=false;for(let i=0;i<5;i++){const nr=r+dr*i,nc=c+dc*i;if(nr<0||nr>=SIZE||nc<0||nc>=SIZE){blocked=true;break}if(grid[nr][nc]===p)mine++;else if(grid[nr][nc]===opp){blocked=true;break}}if(blocked||mine===0)continue;const br=r-dr,bc=c-dc,ar=r+dr*5,ac=c+dc*5,bo=br>=0&&br<SIZE&&bc>=0&&bc<SIZE&&grid[br][bc]===0,ao=ar>=0&&ar<SIZE&&ac>=0&&ac<SIZE&&grid[ar][ac]===0;if(!bo&&!ao)continue;score+=patternScore(mine,(bo?1:0)+(ao?1:0))}return score}
@@ -216,7 +218,7 @@ document.getElementById('diff').onchange=reset;
 document.getElementById('side').onchange=reset;
 document.getElementById('restart').onclick=reset;
 document.getElementById('undo').onclick=undo;
-document.getElementById('sound').onclick=()=>{soundOn=!soundOn;try{localStorage.setItem('gomoku-sound',soundOn?'on':'off')}catch(e){}syncSound();if(soundOn)clack()};
+document.getElementById('sound').onclick=()=>{soundOn=!soundOn;try{localStorage.setItem('gomoku-sound',soundOn?'on':'off')}catch(e){}syncSound();if(soundOn)clack(1)};
 syncSound();
 reset();
 </script>
