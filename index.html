@@ -30,8 +30,8 @@ select:focus{outline:none;border-color:var(--ink)}
 .status{height:28px;font-size:15px;letter-spacing:2px;color:var(--soft);margin-bottom:12px;display:flex;align-items:center;gap:8px;user-select:none}
 .status.win{color:var(--ink);font-size:17px}
 .dot{width:16px;height:16px;border-radius:50%;display:inline-block;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
-.dot.p1{background:radial-gradient(circle at 35% 35%,#b1567a,#6e2240 60%,#3f0f22)}
-.dot.p2{background:radial-gradient(circle at 35% 35%,#fff,#fbf2f4 50%,#dfd0e6)}
+.dot.p1{background:radial-gradient(circle at 35% 35%,#6d4a63,#3e2235 45%,#1c0c17)}
+.dot.p2{background:radial-gradient(circle at 35% 35%,#fffdfb,#f6eeee 50%,#d3c4cf)}
 .thinking{display:inline-flex;gap:3px;margin-left:2px}
 .thinking i{width:4px;height:4px;border-radius:50%;background:var(--soft);animation:blink 1.2s infinite}
 .thinking i:nth-child(2){animation-delay:.2s}.thinking i:nth-child(3){animation-delay:.4s}
@@ -83,14 +83,23 @@ function drawBg(){
   for(let i=0;i<SIZE;i++){const p=PAD+i*CELL;ctx.beginPath();ctx.moveTo(PAD,p);ctx.lineTo(total-PAD,p);ctx.stroke();ctx.beginPath();ctx.moveTo(p,PAD);ctx.lineTo(p,total-PAD);ctx.stroke()}
   for(const r of[3,7,11])for(const c of[3,7,11]){const{x,y}=P(r,c);petalFlower(x,y,4.6,'#f2a7b8')}
 }
-function drawStone(x,y,p,s){
-  ctx.save();ctx.translate(x,y);ctx.scale(s,s);
-  ctx.shadowColor='rgba(120,60,80,.28)';ctx.shadowBlur=5;ctx.shadowOffsetY=2;ctx.beginPath();ctx.arc(0,0,R0,0,7);
-  const g=ctx.createRadialGradient(-5,-5,1,0,0,R0);
-  if(p===1){g.addColorStop(0,'#b1567a');g.addColorStop(.55,'#6e2240');g.addColorStop(1,'#3f0f22');ctx.fillStyle=g;ctx.fill()}
-  else{g.addColorStop(0,'#ffffff');g.addColorStop(.45,'#fbf2f4');g.addColorStop(.8,'#efe0ec');g.addColorStop(1,'#dfd0e6');ctx.fillStyle=g;ctx.fill();ctx.shadowColor='transparent';
-    const ir=ctx.createLinearGradient(-R0,R0,R0,-R0);ir.addColorStop(0,'rgba(170,210,255,.28)');ir.addColorStop(.5,'rgba(255,190,220,0)');ir.addColorStop(1,'rgba(255,200,170,.25)');ctx.fillStyle=ir;ctx.fill()}
-  ctx.shadowColor='transparent';ctx.fillStyle=p===1?'rgba(255,220,235,.45)':'rgba(255,255,255,.9)';ctx.beginPath();ctx.ellipse(-5,-6,4,2.4,-.6,0,7);ctx.fill();
+// 真珍珠：柔光 + 彩虹晕 + 边缘反光；影子单独画，避免压到相邻棋子
+function blob(x,y,r,col,a){const b=ctx.createRadialGradient(x,y,0,x,y,r);b.addColorStop(0,col.replace('A',a));b.addColorStop(1,col.replace('A',0));ctx.fillStyle=b;ctx.fillRect(x-r,y-r,r*2,r*2)}
+function drawShadow(x,y,p,s){const R=R0*s,t=p===1?'70,25,45':'150,110,130';
+  const sx=x+R*.18,sy=y+R*.26,sg=ctx.createRadialGradient(sx,sy,R*.3,sx,sy,R*1.25);
+  sg.addColorStop(0,`rgba(${t},.30)`);sg.addColorStop(.6,`rgba(${t},.12)`);sg.addColorStop(1,`rgba(${t},0)`);ctx.fillStyle=sg;ctx.beginPath();ctx.ellipse(sx,sy,R*1.25,R*1.1,0,0,7);ctx.fill();
+  const cx=x+R*.05,cy=y+R*.12,cg=ctx.createRadialGradient(cx,cy,R*.75,cx,cy,R*1.04);cg.addColorStop(0,`rgba(${t},.35)`);cg.addColorStop(1,`rgba(${t},0)`);ctx.fillStyle=cg;ctx.beginPath();ctx.arc(cx,cy,R*1.04,0,7);ctx.fill()}
+function drawStone(x,y,p,s){const R=R0*s;
+  ctx.save();ctx.beginPath();ctx.arc(x,y,R,0,7);ctx.clip();
+  const base=ctx.createRadialGradient(x-R*.35,y-R*.4,R*.1,x,y,R*1.05);
+  if(p===1){base.addColorStop(0,'#6d4a63');base.addColorStop(.45,'#3e2235');base.addColorStop(1,'#1c0c17')}
+  else{base.addColorStop(0,'#fffdfb');base.addColorStop(.5,'#f6eeee');base.addColorStop(.85,'#e6d9df');base.addColorStop(1,'#d3c4cf')}
+  ctx.fillStyle=base;ctx.fillRect(x-R,y-R,R*2,R*2);
+  ctx.globalCompositeOperation=p===1?'screen':'soft-light';const k=p===1?1:1.6;
+  blob(x+R*.35,y-R*.15,R*.75,'rgba(120,200,190,A)',.22*k);blob(x-R*.4,y+R*.35,R*.8,'rgba(230,140,190,A)',.25*k);blob(x+R*.25,y+R*.45,R*.6,'rgba(170,150,240,A)',.2*k);
+  ctx.globalCompositeOperation='source-over';
+  const rim=ctx.createRadialGradient(x-R*.1,y-R*.1,R*.7,x,y,R);rim.addColorStop(0,'rgba(255,240,245,0)');rim.addColorStop(1,p===1?'rgba(255,200,225,.22)':'rgba(255,255,255,.35)');ctx.fillStyle=rim;ctx.fillRect(x-R,y-R,R*2,R*2);
+  blob(x-R*.32,y-R*.38,R*.55,'rgba(255,255,255,A)',p===1?.35:.75);blob(x-R*.36,y-R*.42,R*.13,'rgba(255,255,255,A)',p===1?.85:1);
   ctx.restore()}
 function petal(x,y,s,col){ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,y+s);ctx.bezierCurveTo(x-s*.9,y+s*.2,x-s*.6,y-s*.8,x-s*.18,y-s);ctx.lineTo(x,y-s*.7);ctx.lineTo(x+s*.18,y-s);ctx.bezierCurveTo(x+s*.6,y-s*.8,x+s*.9,y+s*.2,x,y+s);ctx.fill()}
 function petalFlower(x,y,s,col){ctx.save();ctx.translate(x,y);for(let k=0;k<5;k++){ctx.save();ctx.rotate(k*Math.PI*2/5);petal(0,-s*.9,s*.75,col);ctx.restore()}ctx.fillStyle='#fff3c4';ctx.beginPath();ctx.arc(0,0,s*.25,0,7);ctx.fill();ctx.restore()}
@@ -107,12 +116,15 @@ function needAnim(t){return parts.length>0||(moves.length&&t-moves[moves.length-
 function frame(t){
   const dt=lastT?Math.min(.05,(t-lastT)/1000):0;lastT=t;
   drawBg();
-  for(const m of moves){const{x,y}=P(m.r,m.c);let s=1;const age=(t-m.t)/1000;
+  const drawn=[];
+  for(const m of moves){const{x,y}=P(m.r,m.c);let s=1;const age=Math.max(0,(t-m.t)/1000);
     if(age<.35){const k=age/.35;s=k<.6?.4+k/.6*.75:1.15-(k-.6)/.4*.15}
     if(winLine&&winT){const i=winLine.findIndex(w=>w.r===m.r&&w.c===m.c);if(i>=0){const wt=(t-winT)/1000-i*.12;if(wt>0&&wt<3)s*=1+.12*Math.sin(wt*5)*(1-wt/3)}}
-    drawStone(x,y,m.p,s)}
+    drawn.push([x,y,m.p,s])}
+  for(const d of drawn)drawShadow(...d);
+  for(const d of drawn)drawStone(...d);
   if(moves.length&&!winLine){const m=moves[moves.length-1],{x,y}=P(m.r,m.c);ctx.fillStyle='#e8899e';ctx.beginPath();ctx.arc(x,y,2.6,0,7);ctx.fill()}
-  if(hover&&canPlay()&&!grid[hover.r][hover.c]){const{x,y}=P(hover.r,hover.c);ctx.globalAlpha=.4;drawStone(x,y,cur,.9);ctx.globalAlpha=1}
+  if(hover&&canPlay()&&!grid[hover.r][hover.c]){const{x,y}=P(hover.r,hover.c);ctx.globalAlpha=.4;drawShadow(x,y,cur,.9);drawStone(x,y,cur,.9);ctx.globalAlpha=1}
   if(winLine)drawWinLine(P(winLine[0].r,winLine[0].c),P(winLine[4].r,winLine[4].c),Math.min(1,(t-winT)/900));
   for(const p of parts){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.rot+=p.vr*dt;p.vx+=Math.sin(t/500+p.y*.02)*.8;
     ctx.globalAlpha=Math.max(0,Math.min(1,p.life));ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);petal(0,0,p.sz,p.col);ctx.restore();ctx.globalAlpha=1}
