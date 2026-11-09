@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>樱 · 信笺 · 五子棋</title>
-<meta name="description" content="一盘樱花信笺风格的五子棋，可以和电脑下，也可以两人同下。">
+<title>桃 · 信笺 · 五子棋</title>
+<meta name="description" content="一盘桃花信笺风格的五子棋，可以和电脑下，也可以两人同下。">
 <meta name="theme-color" content="#fbf1f0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='26' fill='%236e2240'/%3E%3Cellipse cx='24' cy='22' rx='8' ry='5' fill='%23ffdcea' opacity='.5' transform='rotate(-30 24 22)'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
@@ -48,7 +48,7 @@ select:focus{outline:none;border-color:var(--ink)}
 </style>
 </head>
 <body>
-<div class="title">樱 · 信笺</div>
+<div class="title">桃 · 信笺</div>
 <div class="sub">把每一步，写进一封信里</div>
 
 <div class="controls">
@@ -62,7 +62,7 @@ select:focus{outline:none;border-color:var(--ink)}
 <div class="status" id="status"></div>
 <div class="frame"><canvas id="board" aria-label="五子棋棋盘"></canvas></div>
 <div class="actions"><button class="restart" id="undo">悔棋</button><button class="restart" id="restart">重新开始</button><button class="restart" id="sound">声音 · 开</button></div>
-<div class="footer">落 · 樱 · 成 · 诗</div>
+<div class="footer">落 · 桃 · 成 · 诗</div>
 
 <script>
 // ================= 基础 =================
@@ -77,14 +77,14 @@ const rand=(a,b)=>a+Math.random()*(b-a);
 const human=()=>+document.getElementById('side').value;
 const aiColor=()=>3-human();
 
-// ================= 樱花信笺：画法 =================
+// ================= 桃花信笺：画法 =================
 const fibers=[];for(let i=0;i<700;i++)fibers.push([Math.random()*total,Math.random()*total,Math.random()*8+2,Math.random()*3,Math.random()*.06]);
 function drawBg(){
   ctx.fillStyle='#fffaf8';ctx.fillRect(0,0,total,total);
   ctx.lineWidth=.6;for(const[x,y,l,a,o]of fibers){ctx.strokeStyle=`rgba(200,140,150,${o})`;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(a)*l,y+Math.sin(a)*l);ctx.stroke()}
   ctx.strokeStyle='rgba(170,100,120,.42)';ctx.lineWidth=.8;
   for(let i=0;i<SIZE;i++){const p=PAD+i*CELL;ctx.beginPath();ctx.moveTo(PAD,p);ctx.lineTo(total-PAD,p);ctx.stroke();ctx.beginPath();ctx.moveTo(p,PAD);ctx.lineTo(p,total-PAD);ctx.stroke()}
-  for(const r of[3,7,11])for(const c of[3,7,11]){const{x,y}=P(r,c);petalFlower(x,y,4.6,'#f2a7b8')}
+  for(const r of[3,7,11])for(const c of[3,7,11]){const{x,y}=P(r,c);petalFlower(x,y,5.6)}
 }
 // 真珍珠：柔光 + 彩虹晕 + 边缘反光；影子单独画，避免压到相邻棋子
 function blob(x,y,r,col,a){const b=ctx.createRadialGradient(x,y,0,x,y,r);b.addColorStop(0,col.replace('A',a));b.addColorStop(1,col.replace('A',0));ctx.fillStyle=b;ctx.fillRect(x-r,y-r,r*2,r*2)}
@@ -105,14 +105,19 @@ function drawStone(x,y,p,s){const R=R0*s;
   const rim=ctx.createRadialGradient(x-R*.1,y-R*.1,R*.7,x,y,R);rim.addColorStop(0,'rgba(255,240,245,0)');rim.addColorStop(1,p===1?'rgba(255,200,225,.22)':'rgba(255,255,255,.35)');ctx.fillStyle=rim;ctx.fillRect(x-R,y-R,R*2,R*2);
   blob(x-R*.32,y-R*.38,R*.55,'rgba(255,255,255,A)',p===1?.35:.75);blob(x-R*.36,y-R*.42,R*.13,'rgba(255,255,255,A)',p===1?.85:1);
   ctx.restore()}
-function petal(x,y,s,col){ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,y+s);ctx.bezierCurveTo(x-s*.9,y+s*.2,x-s*.6,y-s*.8,x-s*.18,y-s);ctx.lineTo(x,y-s*.7);ctx.lineTo(x+s*.18,y-s);ctx.bezierCurveTo(x+s*.6,y-s*.8,x+s*.9,y+s*.2,x,y+s);ctx.fill()}
-function petalFlower(x,y,s,col){ctx.save();ctx.translate(x,y);for(let k=0;k<5;k++){ctx.save();ctx.rotate(k*Math.PI*2/5);petal(0,-s*.9,s*.75,col);ctx.restore()}ctx.fillStyle='#fff3c4';ctx.beginPath();ctx.arc(0,0,s*.25,0,7);ctx.fill();ctx.restore()}
+// 桃花瓣：圆、瓣尖微尖（樱花瓣尖有缺口，桃花没有）
+function petal(x,y,s,col){ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,y+s);ctx.bezierCurveTo(x-s*1.0,y+s*.25,x-s*.7,y-s*.85,x,y-s);ctx.bezierCurveTo(x+s*.7,y-s*.85,x+s*1.0,y+s*.25,x,y+s);ctx.fill()}
+// 星位上的一朵桃花：花心深粉、向外变浅，加一圈花蕊
+function petalFlower(x,y,s){ctx.save();ctx.translate(x,y);
+  for(let k=0;k<5;k++){ctx.save();ctx.rotate(k*Math.PI*2/5);const g=ctx.createRadialGradient(0,0,s*.1,0,0,s*1.7);g.addColorStop(0,'#d9577f');g.addColorStop(.3,'#f08aa8');g.addColorStop(1,'#f9bccb');petal(0,-s*.9,s*.78,g);ctx.restore()}
+  ctx.strokeStyle='#c94d74';ctx.lineWidth=.45;ctx.fillStyle='#f5cf6a';for(let k=0;k<9;k++){const a=k*Math.PI*2/9+.2,l=s*(.42+.12*(k%2));ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(a)*l,Math.sin(a)*l);ctx.stroke();ctx.beginPath();ctx.arc(Math.cos(a)*l,Math.sin(a)*l,s*.07,0,7);ctx.fill()}
+  ctx.restore()}
 function drawWinLine(a,b,t){ctx.save();ctx.strokeStyle='rgba(214,110,138,.8)';ctx.lineWidth=2;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(a.x,a.y);
   const L=Math.hypot(b.x-a.x,b.y-a.y),nx=-(b.y-a.y)/L,ny=(b.x-a.x)/L,n=24;
   for(let i=1;i<=n*t;i++){const k=i/n,w=Math.sin(k*Math.PI*4)*4;ctx.lineTo(a.x+(b.x-a.x)*k+nx*w,a.y+(b.y-a.y)*k+ny*w)}ctx.stroke();ctx.restore()}
 function spawnPetals(x,y,first){
-  if(first)for(let i=0;i<46;i++)parts.push({x:rand(-60,total),y:rand(-total*.6,-10),vx:rand(15,45),vy:rand(30,70),rot:rand(0,6),vr:rand(-2,2),life:rand(5,7),sz:rand(4,7),col:['#f7b7c6','#f2a0b5','#fcd3dc','#ecc0d6'][i%4]});
-  for(let i=0;i<5;i++)parts.push({x,y,vx:rand(-50,50),vy:rand(-60,-10),rot:rand(0,6),vr:rand(-3,3),life:rand(1.5,2.5),sz:rand(3,5),col:'#f2a0b5'})}
+  if(first)for(let i=0;i<46;i++)parts.push({x:rand(-60,total),y:rand(-total*.6,-10),vx:rand(15,45),vy:rand(30,70),rot:rand(0,6),vr:rand(-2,2),life:rand(5,7),sz:rand(4,7),col:['#f6a5bb','#f18fab','#fbc4d2','#f7b3c5'][i%4]});
+  for(let i=0;i<5;i++)parts.push({x,y,vx:rand(-50,50),vy:rand(-60,-10),rot:rand(0,6),vr:rand(-3,3),life:rand(1.5,2.5),sz:rand(3,5),col:'#f18fab'})}
 
 // ================= 绘制循环（只在有动画时跑） =================
 let raf=null,lastT=0;
@@ -148,7 +153,7 @@ function setStatus(){const el=document.getElementById('status');el.classList.tog
   else el.textContent='平局';
   const h=human();document.getElementById('undo').disabled=!(mode==='pvc'?moves.some(m=>m.p===h):moves.length)}
 function reset(){
-  if(moves&&moves.length)sfx('pearlGather',.8,1);
+  if(moves&&moves.length){hush();sfx('pearlGather',.8,1)}
   gid++;grid=Array.from({length:SIZE},()=>Array(SIZE).fill(0));cur=1;over=false;winLine=null;hover=null;touchPending=null;busy=false;moves=[];winT=0;parts=[];
   setStatus();kick();
   if(mode==='pvc'&&aiColor()===1)thinkThen()}
@@ -175,11 +180,14 @@ const POOL={},unlocked={v:false};
 function pool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
 function sfx(f,vol,rate){if(!soundOn)return;const ps=pool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
 // iPhone 要求声音第一次由手指触发：第一次点击时把所有声音静音播一下，之后电脑落子也能出声
-function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather','winGuzheng','loseGuzheng'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
 addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
 // 落子：珠子落地后的一下小弹跳，五个里随机挑；墨莓低一点、珍珠高一点；150ms 对准珍珠落到纸面的那一刻
 function clack(p){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),.8,(p===1?.95:1.04)+(Math.random()-.5)*.04)}
-function chime(){} // 胜利/失败声还在挑，暂时只有樱花飘落
+// 赢：古筝 D 羽调五声音阶慢慢往上拨；输（人机模式电脑赢）：四个音慢慢落下
+// 悔棋或重开时，把还在响的输赢声停掉
+function hush(){['winGuzheng','loseGuzheng'].forEach(f=>(POOL[f]||[]).forEach(a=>{if(!a.muted)a.pause()}))}
+function chime(){const lose=mode==='pvc'&&cur===aiColor();setTimeout(()=>sfx(lose?'loseGuzheng':'winGuzheng',.85,1),250)}
 function syncSound(){document.getElementById('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}
 
 // ================= 悔棋：和电脑下时退回到你上一步之前 =================
@@ -187,7 +195,7 @@ function undo(){if(!moves.length)return;
   if(mode==='pvc'){const h=human();if(!moves.some(m=>m.p===h))return;while(moves[moves.length-1].p!==h)moves.pop();moves.pop();cur=h}
   else cur=moves.pop().p;
   gid++;busy=false;grid=Array.from({length:SIZE},()=>Array(SIZE).fill(0));for(const m of moves){grid[m.r][m.c]=m.p;m.t=0}
-  over=false;winLine=null;winT=0;parts=[];touchPending=null;hover=null;sfx('pearlPick',.7,1);setStatus();kick()}
+  over=false;winLine=null;winT=0;parts=[];touchPending=null;hover=null;hush();sfx('pearlPick',.7,1);setStatus();kick()}
 
 // ================= 电脑（沿用原版 AI 与难度） =================
 function scoreLine(p){let score=0;const opp=3-p;for(const[dr,dc]of DIRS)for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){let mine=0,blocked=false;for(let i=0;i<5;i++){const nr=r+dr*i,nc=c+dc*i;if(nr<0||nr>=SIZE||nc<0||nc>=SIZE){blocked=true;break}if(grid[nr][nc]===p)mine++;else if(grid[nr][nc]===opp){blocked=true;break}}if(blocked||mine===0)continue;const br=r-dr,bc=c-dc,ar=r+dr*5,ac=c+dc*5,bo=br>=0&&br<SIZE&&bc>=0&&bc<SIZE&&grid[br][bc]===0,ao=ar>=0&&ar<SIZE&&ac>=0&&ac<SIZE&&grid[ar][ac]===0;if(!bo&&!ao)continue;score+=patternScore(mine,(bo?1:0)+(ao?1:0))}return score}
