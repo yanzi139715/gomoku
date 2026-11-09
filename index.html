@@ -38,8 +38,11 @@ select:focus{outline:none;border-color:var(--ink)}
 @keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
 .frame{padding:12px;background:#fffaf8;border-radius:4px;box-shadow:0 1px 0 #e6c3ca,0 10px 34px rgba(140,70,90,.12)}
 #board{display:block;width:min(calc(100vw - 56px),548px);height:auto;cursor:pointer;touch-action:manipulation;border-radius:2px}
-.restart{margin-top:22px;font-family:inherit;font-size:14px;letter-spacing:4px;padding:9px 30px;border:1.5px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);cursor:pointer;transition:background .2s,color .2s}
-.restart:hover{background:var(--btn);color:var(--btnInk);border-color:var(--btn)}
+.actions{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;justify-content:center}
+.restart{font-family:inherit;font-size:14px;letter-spacing:4px;padding:9px 30px;border:1.5px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);cursor:pointer;transition:background .2s,color .2s}
+@media(max-width:440px){.restart{padding:8px 16px;letter-spacing:2px;font-size:13px}}
+.restart:disabled{opacity:.35;cursor:default}
+.restart:not(:disabled):hover{background:var(--btn);color:var(--btnInk);border-color:var(--btn)}
 .footer{margin-top:34px;font-size:11px;letter-spacing:4px;color:var(--line);user-select:none}
 .hidden{display:none!important}
 </style>
@@ -58,7 +61,7 @@ select:focus{outline:none;border-color:var(--ink)}
 
 <div class="status" id="status"></div>
 <div class="frame"><canvas id="board" aria-label="五子棋棋盘"></canvas></div>
-<button class="restart" id="restart">重新开始</button>
+<div class="actions"><button class="restart" id="undo">悔棋</button><button class="restart" id="restart">重新开始</button><button class="restart" id="sound">声音 · 开</button></div>
 <div class="footer">落 · 樱 · 成 · 诗</div>
 
 <script>
@@ -68,7 +71,7 @@ const cv=document.getElementById('board'),ctx=cv.getContext('2d');
 const DPR=Math.min(2,window.devicePixelRatio||1),total=CELL*(SIZE-1)+PAD*2;
 cv.width=cv.height=total*DPR;ctx.scale(DPR,DPR);
 const NAMES=['墨莓','珍珠'];
-let gid=0,grid,cur,over,winLine,hover,busy,moves,winT=0,parts=[],mode='pvc';
+let touchPending=null,gid=0,grid,cur,over,winLine,hover,busy,moves,winT=0,parts=[],mode='pvc';
 const P=(r,c)=>({x:PAD+c*CELL,y:PAD+r*CELL});
 const rand=(a,b)=>a+Math.random()*(b-a);
 const human=()=>+document.getElementById('side').value;
@@ -85,10 +88,11 @@ function drawBg(){
 }
 // 真珍珠：柔光 + 彩虹晕 + 边缘反光；影子单独画，避免压到相邻棋子
 function blob(x,y,r,col,a){const b=ctx.createRadialGradient(x,y,0,x,y,r);b.addColorStop(0,col.replace('A',a));b.addColorStop(1,col.replace('A',0));ctx.fillStyle=b;ctx.fillRect(x-r,y-r,r*2,r*2)}
-function drawShadow(x,y,p,s){const R=R0*s,t=p===1?'70,25,45':'150,110,130';
-  const sx=x+R*.18,sy=y+R*.26,sg=ctx.createRadialGradient(sx,sy,R*.3,sx,sy,R*1.25);
-  sg.addColorStop(0,`rgba(${t},.30)`);sg.addColorStop(.6,`rgba(${t},.12)`);sg.addColorStop(1,`rgba(${t},0)`);ctx.fillStyle=sg;ctx.beginPath();ctx.ellipse(sx,sy,R*1.25,R*1.1,0,0,7);ctx.fill();
-  const cx=x+R*.05,cy=y+R*.12,cg=ctx.createRadialGradient(cx,cy,R*.75,cx,cy,R*1.04);cg.addColorStop(0,`rgba(${t},.35)`);cg.addColorStop(1,`rgba(${t},0)`);ctx.fillStyle=cg;ctx.beginPath();ctx.arc(cx,cy,R*1.04,0,7);ctx.fill()}
+// lift：0＝贴在纸上，1＝还在半空（影子更远、更散、更淡）
+function drawShadow(x,y,p,s,lift=0){const R=R0*s,t=p===1?'70,25,45':'150,110,130',off=1+lift*1.6,sp=1+lift*.35,a=1-lift*.55;
+  const sx=x+R*.18*off,sy=y+R*.26*off,sg=ctx.createRadialGradient(sx,sy,R*.3,sx,sy,R*1.25*sp);
+  sg.addColorStop(0,`rgba(${t},${.30*a})`);sg.addColorStop(.6,`rgba(${t},${.12*a})`);sg.addColorStop(1,`rgba(${t},0)`);ctx.fillStyle=sg;ctx.beginPath();ctx.ellipse(sx,sy,R*1.25*sp,R*1.1*sp,0,0,7);ctx.fill();
+  if(lift>.6)return;const cx=x+R*.05,cy=y+R*.12,cg=ctx.createRadialGradient(cx,cy,R*.75,cx,cy,R*1.04);cg.addColorStop(0,`rgba(${t},${.35*(1-lift/.6)})`);cg.addColorStop(1,`rgba(${t},0)`);ctx.fillStyle=cg;ctx.beginPath();ctx.arc(cx,cy,R*1.04,0,7);ctx.fill()}
 function drawStone(x,y,p,s){const R=R0*s;
   ctx.save();ctx.beginPath();ctx.arc(x,y,R,0,7);ctx.clip();
   const base=ctx.createRadialGradient(x-R*.35,y-R*.4,R*.1,x,y,R*1.05);
@@ -118,13 +122,14 @@ function frame(t){
   drawBg();
   const drawn=[];
   for(const m of moves){const{x,y}=P(m.r,m.c);let s=1;const age=Math.max(0,(t-m.t)/1000);
-    if(age<.35){const k=age/.35;s=k<.6?.4+k/.6*.75:1.15-(k-.6)/.4*.15}
+    let lift=0;if(age<.28){const k=age/.28,e=1-Math.pow(1-k,3);s=1.1-.1*e;lift=1-e}
     if(winLine&&winT){const i=winLine.findIndex(w=>w.r===m.r&&w.c===m.c);if(i>=0){const wt=(t-winT)/1000-i*.12;if(wt>0&&wt<3)s*=1+.12*Math.sin(wt*5)*(1-wt/3)}}
-    drawn.push([x,y,m.p,s])}
-  for(const d of drawn)drawShadow(...d);
-  for(const d of drawn)drawStone(...d);
+    drawn.push([x,y,m.p,s,lift])}
+  for(const[x,y,p,s,l]of drawn)drawShadow(x,y,p,s,l);
+  for(const[x,y,p,s,l]of drawn)drawStone(x,y-l*4,p,s);
   if(moves.length&&!winLine){const m=moves[moves.length-1],{x,y}=P(m.r,m.c);ctx.fillStyle='#e8899e';ctx.beginPath();ctx.arc(x,y,2.6,0,7);ctx.fill()}
-  if(hover&&canPlay()&&!grid[hover.r][hover.c]){const{x,y}=P(hover.r,hover.c);ctx.globalAlpha=.4;drawShadow(x,y,cur,.9);drawStone(x,y,cur,.9);ctx.globalAlpha=1}
+  if(hover&&canPlay()&&!grid[hover.r][hover.c]){const{x,y}=P(hover.r,hover.c);ctx.globalAlpha=touchPending?.6:.4;drawShadow(x,y,cur,.9);drawStone(x,y,cur,.9);ctx.globalAlpha=1;
+    if(touchPending){ctx.strokeStyle='rgba(214,110,138,.75)';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.beginPath();ctx.arc(x,y,R0+4,0,7);ctx.stroke();ctx.setLineDash([])}}
   if(winLine)drawWinLine(P(winLine[0].r,winLine[0].c),P(winLine[4].r,winLine[4].c),Math.min(1,(t-winT)/900));
   for(const p of parts){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.rot+=p.vr*dt;p.vx+=Math.sin(t/500+p.y*.02)*.8;
     ctx.globalAlpha=Math.max(0,Math.min(1,p.life));ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);petal(0,0,p.sz,p.col);ctx.restore();ctx.globalAlpha=1}
@@ -138,17 +143,18 @@ function checkWin(r,c,p){for(const[dr,dc]of DIRS){const cells=[{r,c}];for(const 
 function canPlay(){return!over&&!busy&&(mode==='pvp'||cur===human())}
 function setStatus(){const el=document.getElementById('status');el.classList.toggle('win',over&&!!winLine);
   if(!over){const who=mode==='pvc'?(cur===human()?'轮到你（'+NAMES[cur-1]+'）':NAMES[cur-1]+'在想'):'轮到'+NAMES[cur-1];
-    el.innerHTML=`<span class="dot p${cur}"></span> ${who}`+(busy?'<span class="thinking"><i></i><i></i><i></i></span>':'')}
+    el.innerHTML=`<span class="dot p${cur}"></span> ${touchPending?'再点一次，落在这里':who}`+(busy?'<span class="thinking"><i></i><i></i><i></i></span>':'')}
   else if(winLine){const w=grid[winLine[0].r][winLine[0].c];el.innerHTML=`<span class="dot p${w}"></span> `+(mode==='pvc'?(w===human()?'你赢啦！':NAMES[w-1]+'赢了，再来一局吧'):NAMES[w-1]+'赢啦！')}
-  else el.textContent='平局'}
+  else el.textContent='平局';
+  const h=human();document.getElementById('undo').disabled=!(mode==='pvc'?moves.some(m=>m.p===h):moves.length)}
 function reset(){
-  gid++;grid=Array.from({length:SIZE},()=>Array(SIZE).fill(0));cur=1;over=false;winLine=null;hover=null;busy=false;moves=[];winT=0;parts=[];
+  gid++;grid=Array.from({length:SIZE},()=>Array(SIZE).fill(0));cur=1;over=false;winLine=null;hover=null;touchPending=null;busy=false;moves=[];winT=0;parts=[];
   setStatus();kick();
   if(mode==='pvc'&&aiColor()===1)thinkThen()}
 function place(r,c){
-  grid[r][c]=cur;moves.push({r,c,p:cur,t:performance.now()});
+  touchPending=null;grid[r][c]=cur;moves.push({r,c,p:cur,t:performance.now()});setTimeout(clack,90);
   const w=checkWin(r,c,cur);
-  if(w){over=true;winLine=w.slice(0,5);winT=performance.now();winLine.forEach((x,i)=>setTimeout(()=>{if(winLine){const p=P(x.r,x.c);spawnPetals(p.x,p.y,i===0);kick()}},i*120))}
+  if(w){over=true;winLine=w.slice(0,5);winT=performance.now();chime();winLine.forEach((x,i)=>setTimeout(()=>{if(winLine){const p=P(x.r,x.c);spawnPetals(p.x,p.y,i===0);kick()}},i*120))}
   else if(moves.length===SIZE*SIZE)over=true;
   else cur=3-cur;
   setStatus();kick();
@@ -158,7 +164,26 @@ function thinkThen(){busy=true;setStatus();const id=gid;setTimeout(()=>{if(id===
 function toGrid(e){const rc=cv.getBoundingClientRect(),mx=(e.clientX-rc.left)*(total/rc.width),my=(e.clientY-rc.top)*(total/rc.height),c=Math.round((mx-PAD)/CELL),r=Math.round((my-PAD)/CELL);return r<0||r>=SIZE||c<0||c>=SIZE?null:{r,c}}
 cv.addEventListener('mousemove',e=>{const g=toGrid(e);if(g?.r!==hover?.r||g?.c!==hover?.c){hover=g;if(!raf){raf=requestAnimationFrame(frame)}}});
 cv.addEventListener('mouseleave',()=>{hover=null;kick()});
-cv.addEventListener('click',e=>{if(!canPlay())return;const g=toGrid(e);if(!g||grid[g.r][g.c])return;hover=null;place(g.r,g.c)});
+cv.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;if(!canPlay())return;const g=toGrid(e);if(!g||grid[g.r][g.c])return;
+  if(e.pointerType!=='mouse'&&(!touchPending||touchPending.r!==g.r||touchPending.c!==g.c)){touchPending=g;hover=g;setStatus();kick();return}
+  hover=null;place(g.r,g.c)});
+
+// ================= 声音（现场合成，不用音频文件） =================
+let soundOn=true,actx=null;try{soundOn=localStorage.getItem('gomoku-sound')!=='off'}catch(e){}
+function audio(){if(!soundOn)return null;if(!actx){try{actx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){return null}}if(actx.state==='suspended')actx.resume();return actx}
+function clack(){const a=audio();if(!a)return;const t=a.currentTime;
+  const len=Math.floor(a.sampleRate*.04),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,4);
+  const src=a.createBufferSource();src.buffer=buf;const bp=a.createBiquadFilter();bp.type='bandpass';bp.frequency.value=2600+Math.random()*400;bp.Q.value=1.2;const g=a.createGain();g.gain.value=.45;src.connect(bp).connect(g).connect(a.destination);src.start(t);
+  const o=a.createOscillator();o.type='sine';o.frequency.setValueAtTime(1900+Math.random()*200,t);o.frequency.exponentialRampToValueAtTime(1200,t+.06);const og=a.createGain();og.gain.setValueAtTime(.1,t);og.gain.exponentialRampToValueAtTime(.001,t+.08);o.connect(og).connect(a.destination);o.start(t);o.stop(t+.09)}
+function chime(){const a=audio();if(!a)return;const t=a.currentTime;[659.25,783.99,987.77,1318.5].forEach((f,i)=>{const o=a.createOscillator();o.type='sine';o.frequency.value=f;const g=a.createGain(),s=t+.2+i*.12;g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(.08,s+.01);g.gain.exponentialRampToValueAtTime(.001,s+1.2);o.connect(g).connect(a.destination);o.start(s);o.stop(s+1.3)})}
+function syncSound(){document.getElementById('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}
+
+// ================= 悔棋：和电脑下时退回到你上一步之前 =================
+function undo(){if(!moves.length)return;
+  if(mode==='pvc'){const h=human();if(!moves.some(m=>m.p===h))return;while(moves[moves.length-1].p!==h)moves.pop();moves.pop();cur=h}
+  else cur=moves.pop().p;
+  gid++;busy=false;grid=Array.from({length:SIZE},()=>Array(SIZE).fill(0));for(const m of moves){grid[m.r][m.c]=m.p;m.t=0}
+  over=false;winLine=null;winT=0;parts=[];touchPending=null;hover=null;setStatus();kick()}
 
 // ================= 电脑（沿用原版 AI 与难度） =================
 function scoreLine(p){let score=0;const opp=3-p;for(const[dr,dc]of DIRS)for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){let mine=0,blocked=false;for(let i=0;i<5;i++){const nr=r+dr*i,nc=c+dc*i;if(nr<0||nr>=SIZE||nc<0||nc>=SIZE){blocked=true;break}if(grid[nr][nc]===p)mine++;else if(grid[nr][nc]===opp){blocked=true;break}}if(blocked||mine===0)continue;const br=r-dr,bc=c-dc,ar=r+dr*5,ac=c+dc*5,bo=br>=0&&br<SIZE&&bc>=0&&bc<SIZE&&grid[br][bc]===0,ao=ar>=0&&ar<SIZE&&ac>=0&&ac<SIZE&&grid[ar][ac]===0;if(!bo&&!ao)continue;score+=patternScore(mine,(bo?1:0)+(ao?1:0))}return score}
@@ -188,6 +213,9 @@ document.getElementById('modeSeg').onclick=e=>{const b=e.target.closest('button'
 document.getElementById('diff').onchange=reset;
 document.getElementById('side').onchange=reset;
 document.getElementById('restart').onclick=reset;
+document.getElementById('undo').onclick=undo;
+document.getElementById('sound').onclick=()=>{soundOn=!soundOn;try{localStorage.setItem('gomoku-sound',soundOn?'on':'off')}catch(e){}syncSound();if(soundOn)clack()};
+syncSound();
 reset();
 </script>
 </body>
