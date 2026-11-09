@@ -168,14 +168,16 @@ cv.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'&&e.button!==0)ret
   if(e.pointerType!=='mouse'&&(!touchPending||touchPending.r!==g.r||touchPending.c!==g.c)){touchPending=g;hover=g;setStatus();kick();return}
   hover=null;place(g.r,g.c)});
 
-// ================= 声音（现场合成，不用音频文件） =================
-let soundOn=true,actx=null;try{soundOn=localStorage.getItem('gomoku-sound')!=='off'}catch(e){}
-function audio(){if(!soundOn)return null;if(!actx){try{actx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){return null}}if(actx.state==='suspended')actx.resume();return actx}
-function clack(){const a=audio();if(!a)return;const t=a.currentTime;
-  const len=Math.floor(a.sampleRate*.04),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,4);
-  const src=a.createBufferSource();src.buffer=buf;const bp=a.createBiquadFilter();bp.type='bandpass';bp.frequency.value=2600+Math.random()*400;bp.Q.value=1.2;const g=a.createGain();g.gain.value=.45;src.connect(bp).connect(g).connect(a.destination);src.start(t);
-  const o=a.createOscillator();o.type='sine';o.frequency.setValueAtTime(1900+Math.random()*200,t);o.frequency.exponentialRampToValueAtTime(1200,t+.06);const og=a.createGain();og.gain.setValueAtTime(.1,t);og.gain.exponentialRampToValueAtTime(.001,t+.08);o.connect(og).connect(a.destination);o.start(t);o.stop(t+.09)}
-function chime(){const a=audio();if(!a)return;const t=a.currentTime;[659.25,783.99,987.77,1318.5].forEach((f,i)=>{const o=a.createOscillator();o.type='sine';o.frequency.value=f;const g=a.createGain(),s=t+.2+i*.12;g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(.08,s+.01);g.gain.exponentialRampToValueAtTime(.001,s+1.2);o.connect(g).connect(a.destination);o.start(s);o.stop(s+1.3)})}
+// ================= 声音（真实录音，见 sounds/CREDITS.md） =================
+let soundOn=true;try{soundOn=localStorage.getItem('gomoku-sound')!=='off'}catch(e){}
+const POOL={},unlocked={v:false};
+function pool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
+function sfx(f,vol,rate){if(!soundOn)return;const ps=pool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
+// iPhone 要求声音第一次由手指触发：第一次点击时把所有声音静音播一下，之后电脑落子也能出声
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlTap','musicbox'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
+function clack(){sfx('pearlTap',.6,.94+Math.random()*.14)}
+function chime(){[1,1.25,1.5,2,2.5].forEach((r,i)=>setTimeout(()=>sfx('musicbox',.7,r*.75),250+i*150))}
 function syncSound(){document.getElementById('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}
 
 // ================= 悔棋：和电脑下时退回到你上一步之前 =================
