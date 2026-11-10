@@ -375,5 +375,44 @@ reset();
   addEventListener('keydown',e=>{if(e.key==='Escape')close()})})();
 </script>
 <script>try{localStorage.setItem('taoyuan-last','doushou.html')}catch(e){}</script>
+<!-- 信笺下拉菜单：盖住原生下拉框，点开换成桃花信笺样式的菜单；原生框留着显示当前值，游戏逻辑照旧读它 -->
+<style>
+.psel-wrap{position:relative;display:inline-block}
+.psel-hit{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;background:none;padding:0;margin:0}
+.psel-hit:focus-visible+select,.psel-wrap.open select{border-color:var(--ink,#8a4a5c)}
+.psel-menu{position:fixed;z-index:1000;min-width:120px;max-height:min(60vh,420px);overflow-y:auto;padding:6px;background:#fffaf8;border:1px solid #ecc7cf;border-radius:8px;
+  box-shadow:0 2px 6px rgba(140,70,90,.08),0 16px 36px rgba(140,70,90,.18);font-family:'Noto Serif SC','Songti SC',serif;animation:pselIn .18s cubic-bezier(.2,.7,.3,1) both;-webkit-tap-highlight-color:transparent}
+@keyframes pselIn{from{opacity:0;transform:translateY(-4px) scale(.98)}to{opacity:1;transform:none}}
+.psel-menu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:none;font:inherit;font-size:14px;letter-spacing:1px;color:#8a4a5c;padding:9px 14px 9px 10px;border-radius:5px;cursor:pointer;white-space:nowrap}
+.psel-menu button::before{content:'';flex:none;width:7px;height:7px;border-radius:50%;background:transparent}
+.psel-menu button[aria-selected=true]{color:#c94d74;background:rgba(246,186,204,.22)}
+.psel-menu button[aria-selected=true]::before{background:radial-gradient(circle at 35% 30%,#fff 0 20%,#f08aa8 60%,#d9577f 100%)}
+.psel-menu button:hover,.psel-menu button:focus-visible{background:rgba(246,186,204,.32);outline:none}
+@media(prefers-reduced-motion:reduce){.psel-menu{animation:none}}
+</style>
+<script>
+(()=>{let menu=null,cur=null;
+  function close(){if(!menu)return;menu.remove();menu=null;if(cur){cur.parentNode.classList.remove('open');cur=null}}
+  function open(sel,hit){close();if(sel.disabled)return;cur=sel;sel.parentNode.classList.add('open');
+    menu=document.createElement('div');menu.className='psel-menu';menu.setAttribute('role','listbox');
+    [...sel.options].forEach(o=>{const b=document.createElement('button');b.type='button';b.setAttribute('role','option');b.textContent=o.textContent;b.disabled=o.disabled;
+      b.setAttribute('aria-selected',o.selected);b.onclick=e=>{e.stopPropagation();const ch=sel.value!==o.value;sel.value=o.value;close();hit.focus({preventScroll:true});if(ch)sel.dispatchEvent(new Event('change',{bubbles:true}))};menu.appendChild(b)});
+    document.body.appendChild(menu);
+    const r=sel.getBoundingClientRect(),w=Math.max(r.width,menu.offsetWidth),h=menu.offsetHeight;
+    let x=Math.min(Math.max(8,r.left),innerWidth-w-8),y=r.bottom+6;if(y+h>innerHeight-8&&r.top-h-6>8)y=r.top-h-6;
+    menu.style.left=x+'px';menu.style.top=y+'px';menu.style.minWidth=r.width+'px';
+    (menu.querySelector('[aria-selected=true]')||menu.firstChild).focus({preventScroll:true})}
+  function enhance(sel){if(sel.dataset.psel)return;sel.dataset.psel=1;sel.tabIndex=-1;
+    const wrap=document.createElement('span');wrap.className='psel-wrap';sel.replaceWith(wrap);
+    const hit=document.createElement('button');hit.type='button';hit.className='psel-hit';hit.setAttribute('aria-haspopup','listbox');hit.setAttribute('aria-label',sel.getAttribute('aria-label')||'选择');
+    wrap.append(hit,sel);
+    hit.addEventListener('click',e=>{e.stopPropagation();cur===sel?close():open(sel,hit)})}
+  addEventListener('click',e=>{if(menu&&!menu.contains(e.target))close()});
+  addEventListener('keydown',e=>{if(!menu)return;const bs=[...menu.querySelectorAll('button:not(:disabled)')],i=bs.indexOf(document.activeElement);
+    if(e.key==='Escape'){close();e.preventDefault()}else if(e.key==='ArrowDown'){bs[(i+1)%bs.length].focus();e.preventDefault()}else if(e.key==='ArrowUp'){bs[(i-1+bs.length)%bs.length].focus();e.preventDefault()}});
+  addEventListener('resize',close);addEventListener('scroll',close,true);
+  const scan=()=>document.querySelectorAll('select:not([data-psel])').forEach(enhance);scan();
+  new MutationObserver(scan).observe(document.body,{childList:true,subtree:true})})();
+</script>
 </body>
 </html>
