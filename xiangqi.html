@@ -25,7 +25,7 @@
 body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:36px 16px 40px;overflow-x:hidden;
   background:var(--bg);color:var(--ink);font-family:'Noto Serif SC','Songti SC',serif;
   background-image:radial-gradient(ellipse at 15% 10%,rgba(240,190,200,.35),transparent 50%),radial-gradient(ellipse at 90% 90%,rgba(220,200,230,.35),transparent 50%);
-  animation:fadein .9s ease both}
+  animation:fadein .9s ease backwards}
 @keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .title{font-size:36px;font-weight:300;letter-spacing:16px;text-indent:16px;user-select:none;line-height:1.2;text-align:center}
 .sub{font-size:13px;letter-spacing:3px;color:var(--soft);margin:10px 0 22px;text-align:center}
@@ -470,7 +470,8 @@ if(document.fonts){document.fonts.load(`600 24px ${FONT}`,'帅仕相俥傌炮兵
     const hit=document.createElement('button');hit.type='button';hit.className='psel-hit';hit.setAttribute('aria-haspopup','listbox');hit.setAttribute('aria-label',sel.getAttribute('aria-label')||'选择');
     wrap.append(hit,sel);
     hit.addEventListener('click',e=>{e.stopPropagation();cur===sel?close():open(sel,hit)})}
-  addEventListener('click',e=>{if(menu&&!menu.contains(e.target))close()});
+  // 点菜单外面就收起；iPhone 点空白处不发 click，所以用 pointerdown（点自己这个框交给它的开关处理）
+  addEventListener('pointerdown',e=>{if(menu&&!menu.contains(e.target)&&!(cur&&cur.parentNode.contains(e.target)))close()},true);
   addEventListener('keydown',e=>{if(!menu)return;const bs=[...menu.querySelectorAll('button:not(:disabled)')],i=bs.indexOf(document.activeElement);
     if(e.key==='Escape'){close();e.preventDefault()}else if(e.key==='ArrowDown'){bs[(i+1)%bs.length].focus();e.preventDefault()}else if(e.key==='ArrowUp'){bs[(i-1+bs.length)%bs.length].focus();e.preventDefault()}});
   addEventListener('resize',close);addEventListener('scroll',close,true);
