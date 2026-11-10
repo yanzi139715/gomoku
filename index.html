@@ -28,13 +28,16 @@ body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padd
   animation:fadein .9s ease both}
 @keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 #sky{position:fixed;inset:0;pointer-events:none;z-index:0}
-.title{font-size:36px;font-weight:300;letter-spacing:16px;text-indent:16px;line-height:1.2;text-align:center;position:relative}
-.sub{font-size:13px;letter-spacing:3px;color:var(--soft);margin:12px 0 30px;text-align:center;position:relative}
+.title{font-size:40px;font-weight:300;letter-spacing:18px;text-indent:18px;line-height:1.2;text-align:center;position:relative;text-shadow:0 2px 14px rgba(217,87,127,.12)}
+#bloom{display:block;width:34px;height:34px;margin:0 auto 10px;position:relative}
+.sub{display:flex;align-items:center;gap:12px;font-size:13px;letter-spacing:3px;color:var(--soft);margin:14px 0 34px;position:relative}
+.sub::before,.sub::after{content:'';width:46px;height:1px;background:linear-gradient(90deg,transparent,var(--line))}.sub::after{transform:scaleX(-1)}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,240px));gap:18px;position:relative}
 @media(max-width:820px){.grid{grid-template-columns:repeat(2,minmax(0,260px))}}
-@media(max-width:480px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%}a.card{padding:8px 8px 12px}.name{font-size:17px;letter-spacing:5px;text-indent:5px;margin-top:8px}.tag{font-size:11px;letter-spacing:1px}}
-a.card{display:block;text-decoration:none;color:inherit;background:#fffaf8;border-radius:4px;box-shadow:0 1px 0 #e6c3ca,0 10px 30px rgba(140,70,90,.10);padding:12px 12px 16px;transition:transform .25s,box-shadow .25s}
-a.card:hover{transform:translateY(-3px);box-shadow:0 1px 0 #e6c3ca,0 16px 38px rgba(140,70,90,.16)}
+@media(max-width:480px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%}a.card{padding:8px 8px 12px}a.card::before{inset:4px}.name{font-size:17px;letter-spacing:5px;text-indent:5px;margin-top:8px}.name::after{margin-top:7px}.tag{font-size:11px;letter-spacing:1px}}
+a.card{display:block;text-decoration:none;color:inherit;background:#fffaf8;border-radius:6px;box-shadow:0 1px 0 #e6c3ca,0 2px 6px rgba(140,70,90,.05),0 14px 34px rgba(140,70,90,.10);padding:12px 12px 16px;transition:transform .35s cubic-bezier(.2,.7,.3,1),box-shadow .35s}
+a.card::before{content:'';position:absolute;inset:5px;border:1px solid rgba(230,160,178,.28);border-radius:4px;pointer-events:none}
+a.card:hover{transform:translateY(-4px);box-shadow:0 1px 0 #e6c3ca,0 4px 10px rgba(217,87,127,.08),0 20px 44px rgba(217,87,127,.18)}
 a.card:active{transform:scale(.98)}
 a.card{position:relative;animation:rise .7s cubic-bezier(.2,.7,.3,1) both;animation-delay:calc(var(--i,0)*70ms + .15s)}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
@@ -53,12 +56,14 @@ a.card.last::after{content:'上次在下';position:absolute;top:10px;right:10px;
 canvas{display:block;width:100%;height:auto;border-radius:2px}
 .name{font-size:20px;font-weight:400;letter-spacing:8px;text-indent:8px;text-align:center;margin-top:12px}
 .tag{font-size:12px;letter-spacing:4px;color:var(--soft);text-align:center;margin-top:4px}
+.name::after{content:'';display:block;width:22px;height:1px;margin:9px auto 0;background:linear-gradient(90deg,transparent,#e8a8b8,transparent)}
 .footer{margin-top:40px;font-size:11px;letter-spacing:4px;color:var(--line);position:relative}
 .studio{margin-top:10px;font-size:11px;letter-spacing:3px;text-indent:3px;color:var(--soft);opacity:.75;user-select:none;position:relative}
 </style>
 </head>
 <body>
 <canvas id="sky"></canvas>
+<canvas id="bloom" width="102" height="102" aria-hidden="true"></canvas>
 <div class="title">桃 源 弈</div>
 <div class="sub">一 册 棋 ， 慢 慢 下</div>
 <div class="grid">
@@ -164,14 +169,21 @@ const DRAW={
 };
 try{const L=localStorage.getItem('taoyuan-last');if(L){const a=document.querySelector(`a.card[href="${L}"]`);a&&a.classList.add('last')}}catch(e){}
 document.querySelectorAll('canvas[data-g]').forEach(cv=>{ctx=cv.getContext('2d');ctx.fillStyle='#fffaf8';ctx.fillRect(0,0,cv.width,cv.height);DRAW[cv.dataset.g](cv.width,cv.height)});
-// 背景慢慢飘几片桃花瓣
+// 底色加一层很淡的纸纤维，像信笺纸
+(()=>{const T=document.createElement('canvas');T.width=T.height=300;const c=T.getContext('2d');let s=7;const r=()=>(s=s*16807%2147483647)/2147483647;
+  for(let i=0;i<1800;i++){c.fillStyle=`rgba(170,110,125,${r()*.04})`;c.fillRect(r()*300,r()*300,1,1)}
+  c.lineWidth=.6;for(let i=0;i<90;i++){const x=r()*300,y=r()*300,a=r()*6,l=6+r()*16;c.strokeStyle=`rgba(190,130,145,${.04+r()*.05})`;c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(x+Math.cos(a+1)*l*.5,y+Math.sin(a+1)*l*.5,x+Math.cos(a)*l,y+Math.sin(a)*l);c.stroke()}
+  document.body.style.backgroundImage=getComputedStyle(document.body).backgroundImage+`,url(${T.toDataURL()})`})();
+// 标题上一朵小桃花
+(()=>{const cv=document.getElementById('bloom');ctx=cv.getContext('2d');flower(51,51,26)})();
+// 背景慢慢飘几片桃花瓣，飘的时候一面一面地翻
 const sky=document.getElementById('sky'),sc=sky.getContext('2d');let P=[];
 function rs(){sky.width=innerWidth*devicePixelRatio;sky.height=innerHeight*devicePixelRatio}rs();addEventListener('resize',rs);
-for(let i=0;i<9;i++)P.push({x:Math.random(),y:Math.random(),s:5+Math.random()*4,v:.00025+Math.random()*.0003,r:Math.random()*6,w:Math.random()*6,c:['#f6a5bb','#f18fab','#fbc4d2','#f7b3c5'][i%4]});
+for(let i=0;i<11;i++)P.push({x:Math.random(),y:Math.random(),s:4+Math.random()*5,v:.00022+Math.random()*.0003,r:Math.random()*6,w:Math.random()*6,f:Math.random()*6,fv:.012+Math.random()*.02,c:['#f6a5bb','#f18fab','#fbc4d2','#f7b3c5'][i%4]});
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function tick(){sc.clearRect(0,0,sky.width,sky.height);const d=devicePixelRatio;
-  for(const p of P){if(!reduce){p.y+=p.v;p.w+=.01;p.r+=.008;if(p.y>1.05){p.y=-.05;p.x=Math.random()}}
-    const x=(p.x+Math.sin(p.w)*.02)*sky.width,y=p.y*sky.height;sc.save();sc.translate(x,y);sc.rotate(p.r);sc.globalAlpha=.55;sc.fillStyle=p.c;const s=p.s*d;
+  for(const p of P){if(!reduce){p.y+=p.v;p.w+=.01;p.r+=.008;p.f+=p.fv;if(p.y>1.05){p.y=-.05;p.x=Math.random()}}
+    const x=(p.x+Math.sin(p.w)*.02)*sky.width,y=p.y*sky.height;sc.save();sc.translate(x,y);sc.rotate(p.r);sc.scale(Math.cos(p.f)*.75+.25*Math.sign(Math.cos(p.f)||1),1);sc.globalAlpha=.4+.2*Math.abs(Math.cos(p.f));sc.fillStyle=p.c;const s=p.s*d;
     sc.beginPath();sc.moveTo(0,s);sc.bezierCurveTo(-s,s*.25,-s*.7,-s*.85,0,-s);sc.bezierCurveTo(s*.7,-s*.85,s,s*.25,0,s);sc.fill();sc.restore()}
   if(!reduce)requestAnimationFrame(tick)}
 tick();
