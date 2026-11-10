@@ -367,7 +367,7 @@ function checkRep(){const n=game.length;if(!n)return false;const key=game[n-1].k
 function doMove(m){const side=stm;sel=-1;targets=[];
   const hb=hLo,q=make(m);game.push({m,q,side,hb,k:hLo+','+hHi,chk:inCheck(stm)});
   anim={from:m>>7,to:m&127,cap:q,t:performance.now()};
-  setTimeout(()=>{clack(side);if(q)setTimeout(()=>sfx('pearlPick',.55,1.05),40)},DUR-30);
+  setTimeout(()=>{clack(side);if(q)setTimeout(()=>sfx('capture',.75,1),40)},DUR-30);
   checkEnd();setStatus();kick();
   if(!over&&mode==='pvc'&&stm===aiSide())thinkThen()}
 
@@ -405,7 +405,7 @@ const POOL={},unlocked={v:false};
 function pool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
 function sfx(f,vol,rate){if(!soundOn)return;const ps=pool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
 // iPhone 要求声音第一次由手指触发：第一次点击时把所有声音静音播一下，之后电脑走子也能出声
-function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather','capture'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
 addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
 // 落子：珠子落下的小弹跳，五个里随机挑；黑方低一点、红方高一点；对准棋子落到纸面的那一刻
 function clack(side){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),.8,(side<0?.95:1.04)+(Math.random()-.5)*.04)}

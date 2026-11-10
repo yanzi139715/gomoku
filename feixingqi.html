@@ -343,7 +343,7 @@ const POOL={},unlocked={v:false};
 function apool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
 function sfx(f,vol,rate){if(!soundOn)return;const ps=apool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
 // iPhone 要求声音第一次由手指触发：第一次点击时把所有声音静音播一下，之后电脑走子也能出声
-function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather'].forEach(f=>apool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather','capture','dice'].forEach(f=>apool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
 addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
 function clack(k,vol=.6){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),vol,.96+k*.03+(Math.random()-.5)*.05)}
 function syncSound(){$('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}
@@ -378,7 +378,7 @@ function startTurn(extra){
 function doRoll(){
   if(phase!=='roll'||over)return;phase='rolling';thinkAI=false;$('dice').classList.remove('ready');
   const d=forced.length?forced.shift():1+Math.floor(Math.random()*6);
-  const el=$('dice');el.classList.remove('roll');void el.offsetWidth;el.classList.add('roll');sfx('pearlPick',.45,1.12);
+  const el=$('dice');el.classList.remove('roll');void el.offsetWidth;el.classList.add('roll');sfx('dice',.9,1);
   const g=gid;let n=0;const iv=setInterval(()=>{if(g!==gid){clearInterval(iv);return}setFace(1+Math.floor(Math.random()*6));if(++n>=7)clearInterval(iv)},80);
   later(620,()=>{clearInterval(iv);setFace(d);clack(0,.7);afterRoll(d)})}   // 先停掉乱跳的点数，免得手机上计时器慢半拍把结果盖掉
 function afterRoll(d){
@@ -403,7 +403,7 @@ function startMove(k,i,d){
     if(sg.kind==='fly')sfx('pearlPick',.5,1.15);else if(sg.kind==='takeoff')sfx('pearlPick',.5,1);
     setTimeout(()=>{if(g!==gid)return;const st=sg.st;pos[k][i]=st.to;
       if(sg.kind==='hop'||sg.kind==='takeoff'||sg.kind==='fly'||st.stop)clack(k,sg.kind==='hop'?.4:.6);
-      if(st.stop)for(const[e,j]of victimsAt(k,st.to)){const[gx,gy]=xyOf(e,pos[e][j],j);ghosts.push({x:gx,y:gy,k:e,t0:performance.now()});pos[e][j]=-1;appear[e+':'+j]=performance.now()+FADE*.6;setTimeout(()=>sfx('pearlPick',.55,.9),60)}
+      if(st.stop)for(const[e,j]of victimsAt(k,st.to)){const[gx,gy]=xyOf(e,pos[e][j],j);ghosts.push({x:gx,y:gy,k:e,t0:performance.now()});pos[e][j]=-1;appear[e+':'+j]=performance.now()+FADE*.6;setTimeout(()=>sfx('capture',.75,.95),60)}
       if(!anim)return;if(anim.si<segs.length-1){anim.si++;play()}else{anim=null;kick();setTimeout(()=>{if(g===gid)afterMove(k,d)},260)}},sg.dur)};
   // 先把飞机算在原地（动画期间不画静态那一份）
   play()}

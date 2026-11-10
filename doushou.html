@@ -285,7 +285,7 @@ function reset(){
 function select(i){sel=i;targets=[];if(i!=null)genFrom(board,i,targets);setStatus();kick()}
 function doMove(f,t){
   const p=cur,cp=make(board,f,t);hist.push({f,t,p,cap:cp,t0:performance.now()});sel=null;targets=[];
-  setTimeout(()=>clack(p),150);if(cp)setTimeout(()=>clack(3-p,.78),260);
+  setTimeout(()=>clack(p),150);if(cp)setTimeout(()=>sfx('capture',.75,1),190);
   const opp=3-p;
   if(T[t]===denOf(p)){over=true;winner=p;winWhy='den'}
   else if(cnt[opp]===0){over=true;winner=p;winWhy='all'}
@@ -309,7 +309,7 @@ const POOL={},unlocked={v:false};
 function pool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
 function sfx(f,vol,rate){if(!soundOn)return;const ps=pool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
 // iPhone 要求声音第一次由手指触发：第一次点击时把所有声音静音播一下，之后电脑落子也能出声
-function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather','capture'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
 addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
 function clack(p,vol=.8){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),vol,(p===1?.95:1.04)+(Math.random()-.5)*.04)}
 function syncSound(){$('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}

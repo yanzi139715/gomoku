@@ -358,7 +358,7 @@ function doMove(f,t){const p=cur;hist.push({p,s:snap()});sel=-1;targets=[];
     if(TY(def)===FLAG){over=true;winner=p;why='flag'}}
   else{b[t]=att;b[f]=0;quiet++}
   lastMv[p]={f,t};last={k:'move',f,t};anim={k:'move',f,t,att,def,res:res||'win',t0:performance.now(),len:DUR+200};
-  setTimeout(()=>{clack(CO(att));if(def)setTimeout(()=>sfx('pearlPick',.6,res==='both'?.92:1.05),50)},DUR-30);
+  setTimeout(()=>{clack(CO(att));if(def)setTimeout(()=>sfx('capture',.75,res==='both'?.92:1),50)},DUR-30);
   endTurn()}
 function hasAction(p){if(hasDown(b))return true;const c=pcol[p];return c>=0&&genAll(b,c).length>0}
 function endTurn(){
@@ -431,7 +431,7 @@ const POOL={},unlocked={v:false};
 function apool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
 function sfx(f,vol,rate){if(!soundOn)return;const ps=apool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
 // iPhone 要求声音第一次由手指触发：第一次点击时把所有声音静音播一下，之后电脑走子也能出声
-function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather'].forEach(f=>apool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather','capture'].forEach(f=>apool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
 addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
 // 落子：珠子落下的小弹跳，五个里随机挑；墨莓低一点、珍珠高一点
 function clack(c,vol=.8){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),vol,(c===0?.95:1.04)+(Math.random()-.5)*.04)}

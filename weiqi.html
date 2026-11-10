@@ -349,7 +349,7 @@ function commit(i,res){
   bd=res.b;stoneT[i]=now;caps[col-1]+=res.caps.length;last=i;passes=0;cur=3-col;snaps.push(snapNow());
   animUntil=now+500;
   setTimeout(()=>clack(col),150);
-  if(res.caps.length){setTimeout(()=>sfx('pearlPick',.65,1.0+Math.random()*.05),300);
+  if(res.caps.length){setTimeout(()=>sfx('capture',.75,1.0+Math.random()*.05),300);
     // 被提的子化成几瓣桃花
     for(const x of res.caps){const p=P(x);setTimeout(()=>{spawnPetals(p.x,p.y,false,2);kick()},200)}}
   afterMove()}
@@ -383,7 +383,7 @@ let soundOn=true;try{soundOn=localStorage.getItem('gomoku-sound')!=='off'}catch(
 const POOL={},unlocked={v:false};
 function pool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
 function sfx(f,vol,rate){if(!soundOn)return;const ps=pool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
-function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather','capture'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
 addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
 function clack(p){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),.8,(p===1?.95:1.04)+(Math.random()-.5)*.04)}
 function hush(){}
