@@ -81,8 +81,8 @@ select:focus{outline:none;border-color:var(--ink)}
 <div class="rules-mask" id="rulesMask" role="dialog" aria-modal="true" aria-label="围棋怎么下"><div class="rules"><h3>围棋怎么下</h3><h4>目标</h4><p>用棋子围出更大的地盘。下完后数一数：自己活着的棋子，加上被自己围住的空点，多的一方赢。</p>
 <h4>怎么下</h4><ul><li>墨莓（黑）先下，双方轮流把棋子放在交叉点上，放下就不能再挪。</li><li>棋子上下左右挨着的空点叫「气」，连在一起的同色棋子共用气。</li><li>一块棋的气全部被对方堵住，就会被「提」掉，从棋盘上拿走。</li></ul>
 <h4>不能下的地方</h4><ul><li><b>自杀</b>：落下去自己就没有气、又提不到对方的子，这种地方不能下。</li><li><b>打劫</b>：自己的一颗子刚被提掉，不能马上在原地把对方那颗提回来，要先在别处下一手。</li></ul>
-<h4>结束和数子</h4><ul><li>觉得已经没有地方好下了，就点「停一手」。双方连着各停一手，棋局结束。</li><li>结束后，点一下已经活不了的棋块，把它标成死子，再点「确认数子」看结果。</li><li>黑方先下占了便宜，所以白方（珍珠）额外加分：9 路贴 7 点，13 路和 19 路贴 7.5 点。</li><li>轮到你下的时候，也可以点「认输」。</li></ul>
-<h4>初学建议</h4><p>先从 9 路小棋盘下起，一盘十几分钟就能下完。</p><button class="close">知道啦</button></div></div>
+<h4>结束和数子</h4><ul><li>觉得已经没有地方好下了，就点「停一手」。双方连着各停一手，棋局结束。</li><li>和电脑下时，你停一手后，电脑觉得自己领先、或者已经没有值得下的地方，才会跟着停；落后的话它会接着下。</li><li>结束后，点一下已经活不了的子，它周围连着的、被同一片空点隔开的同色子会一起标成死子（再点一下取消），然后点「确认数子」看结果。</li><li>黑方先下占了便宜，所以白方（珍珠）额外加分：9 路贴 7 点，13 路和 19 路贴 7.5 点。</li><li>轮到你下的时候，也可以点「认输」。</li></ul>
+<h4>初学建议</h4><p>先从 9 路小棋盘下起，一盘十几分钟就能下完。和电脑下目前只有 9 路：和电脑下时换成 13 路、19 路会自动改成两人同下，换回 9 路再变回和电脑下。</p><button class="close">知道啦</button></div></div>
 <div class="title">桃 · 围棋</div>
 <div class="sub">一子一子，围出一片春天</div>
 
@@ -106,6 +106,110 @@ select:focus{outline:none;border-color:var(--ink)}
 <div class="footer">落 · 桃 · 成 · 诗</div>
 <div class="studio">妍子工作室 出品</div>
 
+<script id="engine">
+// ================= 规则内核 + 电脑（页面和后台线程共用同一份源码） =================
+let N=9,N2=81,NB=[],DG=[];
+function geom(n){N=n;N2=n*n;NB=[];DG=[];
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++){const nb=[],dg=[];
+    for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){const a=r+dr,b=c+dc;if(a>=0&&a<n&&b>=0&&b<n)nb.push(a*n+b)}
+    for(const[dr,dc]of[[-1,-1],[-1,1],[1,-1],[1,1]]){const a=r+dr,b=c+dc;if(a>=0&&a<n&&b>=0&&b<n)dg.push(a*n+b)}
+    NB.push(nb);DG.push(dg)}}
+let STAMP=new Int32Array(361),LSTAMP=new Int32Array(361),CH=new Int32Array(361),stampC=0,chainN=0,LIB=-1;
+// 找出 i 所在的连块，存进 CH[0..chainN)，返回它的气数；LIB 记下其中一口气
+function chainF(b,i){const col=b[i];stampC++;chainN=0;CH[chainN++]=i;STAMP[i]=stampC;let libs=0;LIB=-1;
+  for(let k=0;k<chainN;k++){const nb=NB[CH[k]];for(let q=0;q<nb.length;q++){const j=nb[q],v=b[j];
+    if(v===0){if(LSTAMP[j]!==stampC){LSTAMP[j]=stampC;libs++;LIB=j}}else if(v===col&&STAMP[j]!==stampC){STAMP[j]=stampC;CH[chainN++]=j}}}
+  return libs}
+// 落子并提子；返回提了几子，自杀返回 -1（并撤回）
+function playMove(b,i,col,out){
+  b[i]=col;const opp=3-col;let cap=0;const nb=NB[i];
+  for(let q=0;q<nb.length;q++){const j=nb[q];if(b[j]===opp&&chainF(b,j)===0){const n=chainN;for(let k=0;k<n;k++){const x=CH[k];b[x]=0;if(out)out.push(x)}cap+=n}}
+  if(cap===0&&chainF(b,i)===0){b[i]=0;return-1}
+  return cap}
+// 数子：活子 + 只被一种颜色围住的空；dead 里的子视为已被提走
+function scoreBoard(b,deadSet){
+  let a=b;if(deadSet&&deadSet.size){a=Int8Array.from(b);deadSet.forEach(i=>a[i]=0)}
+  let bs=0,ws=0,bt=0,wt=0;const t=new Int8Array(N2),seen=new Uint8Array(N2);
+  for(let i=0;i<N2;i++){if(a[i]===1)bs++;else if(a[i]===2)ws++}
+  for(let i=0;i<N2;i++){if(a[i]!==0||seen[i])continue;const st=[i];seen[i]=1;let touch=0;
+    for(let k=0;k<st.length;k++){const nb=NB[st[k]];for(let q=0;q<nb.length;q++){const j=nb[q],v=a[j];if(v===0){if(!seen[j]){seen[j]=1;st.push(j)}}else touch|=v}}
+    if(touch===1){bt+=st.length;for(const x of st)t[x]=1}else if(touch===2){wt+=st.length;for(const x of st)t[x]=2}}
+  return{bs,ws,bt,wt,terr:t}}
+// 自己的眼：四周都是自己的子，斜角最多一个不是（边上一个都不能少）
+function isEye(b,i,col){const nb=NB[i];for(let q=0;q<nb.length;q++)if(b[nb[q]]!==col)return false;
+  const dg=DG[i];let bad=0;for(let q=0;q<dg.length;q++)if(b[dg[q]]!==col)bad++;return dg.length<4?bad===0:bad<=1}
+
+// —— 模拟对局：随机但不傻（不填眼、不把一串子送进虎口、先提打吃、先逃被打吃的子） ——
+function rndMove(b,col){const s=(Math.random()*N2)|0;
+  for(let k=0;k<N2;k++){let i=s+k;if(i>=N2)i-=N2;
+    if(b[i]!==0||isEye(b,i,col))continue;
+    const r=playMove(b,i,col,null);if(r<0)continue;
+    if(r===0&&chainF(b,i)===1&&chainN>=2){b[i]=0;continue}
+    return i}
+  return-1}
+function replyTo(b,last,col){const opp=3-col;
+  if(b[last]===opp&&chainF(b,last)===1){const L=LIB;if(playMove(b,L,col,null)>=0)return L}
+  const nb=NB[last];
+  for(let q=0;q<nb.length;q++){const j=nb[q];if(b[j]!==col||chainF(b,j)!==1)continue;const L=LIB;
+    const r=playMove(b,L,col,null);if(r<0)continue;
+    if(r>0||chainF(b,L)>=2)return L;
+    b[L]=0}
+  return-1}
+function playout(b,col,last,acc){let ps=0,n=0;const lim=N2*3;
+  while(ps<2&&n<lim){let mv=last>=0&&b[last]?replyTo(b,last,col):-1;if(mv<0)mv=rndMove(b,col);
+    ps=mv<0?ps+1:0;last=mv;col=3-col;n++}
+  let s=0;
+  for(let i=0;i<N2;i++){let v=b[i];if(!v){const nb=NB[i];let t=0;for(let q=0;q<nb.length;q++)t|=b[nb[q]];v=t}
+    if(v===1){s++;acc[i]++}else if(v===2){s--;acc[i]--}}
+  return s}
+
+// —— 想一步：先用规则挑候选，再用模拟对局比较；顺便估计每个点最后归谁，用来判断要不要停一手 ——
+// q={n,b,col,komi,passes,prev,budget}；返回 {move:-1 表示停一手, ms, est, stat, po}
+function think(q){const t0=performance.now();if(N!==q.n)geom(q.n);
+  const b0=Int8Array.from(q.b),ac=q.col,oc=3-ac,sgn=ac===1?1:-1,komi=q.komi,prev=q.prev;
+  let stones=0;for(let i=0;i<N2;i++)if(b0[i])stones++;
+  const early=stones<N2*.3,mid=(N-1)/2,cands=[];
+  for(let i=0;i<N2;i++){if(b0[i])continue;
+    const b=Int8Array.from(b0),cap=playMove(b,i,ac,null);if(cap<0)continue;
+    if(cap===1&&prev){let same=true;for(let k=0;k<N2;k++)if(b[k]!==prev[k]){same=false;break}if(same)continue}   // 打劫
+    if(cap===0&&isEye(b0,i,ac))continue;                                                                          // 不填自己的眼
+    let h=0,tac=0;const libs=chainF(b,i),sz=chainN;
+    if(cap){h+=4+cap*3;tac=1}                                                       // 提子
+    if(libs===1)h-=cap?1:6+sz*3;else if(libs===2)h-=.5;else if(libs>=3)h+=.5;       // 别自己送进虎口
+    const nb=NB[i];let own=0;
+    for(let k=0;k<nb.length;k++){const j=nb[k];
+      if(b0[j]===ac){own++;if(chainF(b0,j)===1&&(libs>=2||cap)){h+=6+chainN*3;tac=1}}   // 救被打吃的子
+      else if(b0[j]===oc&&b[j]===oc){const l0=chainF(b0,j),n0=chainN;if(l0>1&&chainF(b,j)===1&&libs>=2){h+=1.5+n0;if(n0>1)tac=1}}}  // 打吃
+    if(own===nb.length&&!cap)h-=4;                                                  // 别往自己地里填
+    const r=Math.floor(i/N),c=i%N,d=Math.min(r,c,N-1-r,N-1-c);
+    h+=d===0?-3:d===1?-.5:.5;
+    if(stones<4)h-=(Math.abs(r-mid)+Math.abs(c-mid))*.4;
+    else{let near=false;for(let dr=-2;dr<=2&&!near;dr++)for(let dc=-2;dc<=2;dc++){const a=r+dr,e=c+dc;if(a>=0&&a<N&&e>=0&&e<N&&b0[a*N+e]){near=true;break}}if(!near)h-=2}
+    h+=Math.random()*.6;
+    cands.push({i,b,h,tac,w:0,n:0,s:0})}
+  if(!cands.length)return{move:-1,ms:performance.now()-t0,po:0,why:'none'};
+  cands.sort((a,b)=>b.h-a.h);
+  const K=N===9?12:N===13?14:16,top=cands.slice(0,K),acc=new Int32Array(N2),tmp=new Int8Array(N2);let tot=0;
+  const run=c=>{tmp.set(c.b);const m=(playout(tmp,oc,c.i,acc)-komi)*sgn;c.n++;c.s+=m;if(m>0)c.w++;tot++};
+  for(let rep=0;rep<2;rep++)for(const c of top)run(c);
+  while(performance.now()-t0<q.budget){
+    for(let z=0;z<8;z++){let best=top[0],bv=-1e9;const lg=Math.log(tot);
+      for(const c of top){const v=c.w/c.n+.5*Math.sqrt(lg/c.n)+c.h*.04/c.n;if(v>bv){bv=v;best=c}}
+      run(best)}}
+  // 每个点最后归谁（从电脑这边看，+1 电脑，-1 对方）
+  const own=new Float32Array(N2);let est=0,ai=0,op=0,settled=0;
+  for(let i=0;i<N2;i++){const o=acc[i]/tot*sgn;own[i]=o;if(o>.4)ai++;else if(o<-.4)op++;if(Math.abs(o)>.7)settled++}
+  for(const c of top)est+=c.s;est/=tot;
+  const stat=ai-op+(ac===2?komi:-komi);
+  const val=c=>.55*c.w/c.n+.45*(.5+.5*Math.tanh(c.s/c.n/(N*1.2)))+c.h*.02;   // 胜率 + 赢多少（大优/大劣时胜率会饱和） + 规则加分
+  const useful=early?top:top.filter(c=>c.tac||Math.abs(own[c.i])<.7);
+  let best=null,bv=-1e9;for(const c of(useful.length?useful:top)){const v=val(c);if(v>bv){bv=v;best=c}}
+  const out={ms:performance.now()-t0,po:tot,est:Math.round(est*10)/10,stat,settled:Math.round(settled/N2*100)/100,wr:Math.round(best.w/best.n*100)/100,useful:useful.length};
+  const ahead=est>0&&stat>0;
+  if(!early&&q.passes===1&&ahead)return Object.assign(out,{move:-1,why:'ahead'});   // 对方停了，自己领先：停
+  if(!early&&!useful.length)return Object.assign(out,{move:-1,why:'nothing'});      // 只剩填自己地/送死的点：停
+  return Object.assign(out,{move:best.i})}
+</script>
 <script>
 // ================= 基础 =================
 const TOT=548,PAD=26;
@@ -114,7 +218,7 @@ const DPR=Math.min(2,window.devicePixelRatio||1),total=TOT;
 const NAMES=['墨莓','珍珠'];
 const KOMI={9:7,13:7.5,19:7.5};
 const KOMI_TXT={9:'7 点',13:'3.75 子（7.5 点）',19:'3.75 子（7.5 点）'};
-let N=9,N2=81,CELL=0,R0=0,NB=[],DG=[],STARS=[];
+let CELL=0,R0=0,STARS=[],autoPvp=false;
 let mode='pvc',phase='play',bd,cur,caps,passes,last,dead=new Set(),result=null,snaps=[],stoneT,fades=[],parts=[];
 let hover=null,hoverOK=false,touchPending=null,gid=0,busy=false,flashMsg='',flashTimer=0,animUntil=0,resignArm=0,terr=null,scoreInfo=null;
 const $=id=>document.getElementById(id);
@@ -124,13 +228,8 @@ const human=()=>+$('side').value;
 const aiColor=()=>3-human();
 
 function setupBoard(n){
-  N=n;N2=n*n;CELL=(TOT-2*PAD)/(n-1);R0=Math.min(CELL*.47,24);
+  geom(n);CELL=(TOT-2*PAD)/(n-1);R0=Math.min(CELL*.47,24);
   cv.width=cv.height=total*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
-  NB=[];DG=[];
-  for(let r=0;r<n;r++)for(let c=0;c<n;c++){const nb=[],dg=[];
-    for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){const a=r+dr,b=c+dc;if(a>=0&&a<n&&b>=0&&b<n)nb.push(a*n+b)}
-    for(const[dr,dc]of[[-1,-1],[-1,1],[1,-1],[1,1]]){const a=r+dr,b=c+dc;if(a>=0&&a<n&&b>=0&&b<n)dg.push(a*n+b)}
-    NB.push(nb);DG.push(dg)}
   const pts=n===9?[[2,2],[2,6],[6,2],[6,6],[4,4]]:n===13?[[3,3],[3,9],[9,3],[9,9],[6,6]]:[3,9,15].flatMap(r=>[3,9,15].map(c=>[r,c]));
   STARS=pts.map(([r,c])=>r*n+c);
 }
@@ -198,19 +297,6 @@ function frame(t){
   raf=needAnim(t)?requestAnimationFrame(frame):null;if(!raf)lastT=0}
 function kick(){if(!raf)raf=requestAnimationFrame(frame)}
 
-// ================= 规则内核（扁平棋盘，人和电脑共用） =================
-let STAMP=new Int32Array(361),LSTAMP=new Int32Array(361),CH=new Int32Array(361),stampC=0,chainN=0;
-// 找出 i 所在的连块，存进 CH[0..chainN)，返回它的气数
-function chainF(b,i){const col=b[i];stampC++;chainN=0;CH[chainN++]=i;STAMP[i]=stampC;let libs=0;
-  for(let k=0;k<chainN;k++){const nb=NB[CH[k]];for(let q=0;q<nb.length;q++){const j=nb[q],v=b[j];
-    if(v===0){if(LSTAMP[j]!==stampC){LSTAMP[j]=stampC;libs++}}else if(v===col&&STAMP[j]!==stampC){STAMP[j]=stampC;CH[chainN++]=j}}}
-  return libs}
-// 落子并提子；返回提了几子，自杀返回 -1（并撤回）
-function playMove(b,i,col,out){
-  b[i]=col;const opp=3-col;let cap=0;const nb=NB[i];
-  for(let q=0;q<nb.length;q++){const j=nb[q];if(b[j]===opp&&chainF(b,j)===0){const n=chainN;for(let k=0;k<n;k++){const x=CH[k];b[x]=0;if(out)out.push(x)}cap+=n}}
-  if(cap===0&&chainF(b,i)===0){b[i]=0;return-1}
-  return cap}
 // 真实对局里的试走：禁自杀 + 劫（不能让棋盘回到两手之前的样子）
 function tryMove(i,col){
   if(bd[i])return{err:'occupied'};
@@ -219,16 +305,6 @@ function tryMove(i,col){
   const str=b.join('');
   if(snaps.length>=2&&str===snaps[snaps.length-2].str)return{err:'ko'};
   return{b,caps:out,str}}
-// 数子：活子 + 只被一种颜色围住的空；dead 里的子视为已被提走
-function scoreBoard(b,deadSet){
-  let a=b;if(deadSet&&deadSet.size){a=Int8Array.from(b);deadSet.forEach(i=>a[i]=0)}
-  let bs=0,ws=0,bt=0,wt=0;const t=new Int8Array(N2),seen=new Uint8Array(N2);
-  for(let i=0;i<N2;i++){if(a[i]===1)bs++;else if(a[i]===2)ws++}
-  for(let i=0;i<N2;i++){if(a[i]!==0||seen[i])continue;const st=[i];seen[i]=1;let touch=0;
-    for(let k=0;k<st.length;k++){const nb=NB[st[k]];for(let q=0;q<nb.length;q++){const j=nb[q],v=a[j];if(v===0){if(!seen[j]){seen[j]=1;st.push(j)}}else touch|=v}}
-    if(touch===1){bt+=st.length;for(const x of st)t[x]=1}else if(touch===2){wt+=st.length;for(const x of st)t[x]=2}}
-  return{bs,ws,bt,wt,terr:t}}
-
 // ================= 状态 =================
 function snapNow(){return{b:Int8Array.from(bd),str:bd.join(''),cur,caps:caps.slice(),passes,last}}
 function restore(s){bd=Int8Array.from(s.b);cur=s.cur;caps=s.caps.slice();passes=s.passes;last=s.last;phase=passes>=2?'mark':'play'}
@@ -260,7 +336,7 @@ function setStatus(){
 function refreshScore(){scoreInfo=scoreBoard(bd,dead);terr=scoreInfo.terr}
 function reset(){
   if(snaps.length>1){hush();sfx('pearlGather',.8,1)}
-  gid++;busy=false;phase='play';cur=1;caps=[0,0];passes=0;last=null;dead=new Set();result=null;terr=null;scoreInfo=null;
+  stopAI();gid++;busy=false;phase='play';cur=1;caps=[0,0];passes=0;last=null;dead=new Set();result=null;terr=null;scoreInfo=null;
   bd=new Int8Array(N2);stoneT=new Float64Array(N2);fades=[];parts=[];hover=null;touchPending=null;resignArm=0;flashMsg='';
   snaps=[snapNow()];
   setStatus();kick();
@@ -288,12 +364,16 @@ function humanMove(i){
   if(res.err)return;
   commit(i,res)}
 
+// 标死子：从点到的子出发，经同色子和空点铺开（碰到对方的子就停），这一片里的同色子一起标
+function deadRegion(g){const col=bd[g],seen=new Uint8Array(N2),st=[g],grp=[];seen[g]=1;
+  for(let k=0;k<st.length;k++){const x=st[k];if(bd[x]===col)grp.push(x);for(const j of NB[x])if(!seen[j]&&bd[j]!==3-col){seen[j]=1;st.push(j)}}
+  return grp}
 function toGrid(e){const rc=cv.getBoundingClientRect(),mx=(e.clientX-rc.left)*(total/rc.width),my=(e.clientY-rc.top)*(total/rc.height),c=Math.round((mx-PAD)/CELL),r=Math.round((my-PAD)/CELL);return r<0||r>=N||c<0||c>=N?null:r*N+c}
 function setHover(g){if(g===hover)return;hover=g;hoverOK=g!=null&&!bd[g]&&canPlay()&&!tryMove(g,cur).err;kick()}
 cv.addEventListener('mousemove',e=>setHover(toGrid(e)));
 cv.addEventListener('mouseleave',()=>{hover=null;kick()});
 cv.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;const g=toGrid(e);if(g==null)return;
-  if(phase==='mark'){if(!bd[g])return;chainF(bd,g);const grp=Array.from(CH.subarray(0,chainN)),on=!dead.has(g);grp.forEach(x=>on?dead.add(x):dead.delete(x));refreshScore();setStatus();kick();return}
+  if(phase==='mark'){if(!bd[g])return;const grp=deadRegion(g),on=!dead.has(g);grp.forEach(x=>on?dead.add(x):dead.delete(x));refreshScore();setStatus();kick();return}
   if(!canPlay()||bd[g])return;
   if(e.pointerType!=='mouse'&&touchPending!==g){if(tryMove(g,cur).err){humanMove(g);return}touchPending=g;hover=g;hoverOK=true;setStatus();kick();return}
   humanMove(g)});
@@ -311,14 +391,14 @@ function syncSound(){$('sound').textContent=soundOn?'声音 · 开':'声音 · �
 
 // ================= 悔棋 / 认输 / 数子 =================
 function undo(){
-  gid++;busy=false;
+  stopAI();gid++;busy=false;
   if(phase==='done'&&result&&result.resign){phase='play';result=null}
   else{const t=undoTarget();if(t<0)return;snaps.length=t+1;restore(snaps[t]);result=null;
     stoneT=new Float64Array(N2);fades=[];parts=[];dead=new Set();terr=null;scoreInfo=null}
   touchPending=null;hover=null;resignArm=0;flashMsg='';sfx('pearlPick',.7,1);afterMove()}
 function resign(){
   if(!resignArm){resignArm=setTimeout(()=>{resignArm=0;setStatus()},3000);setStatus();return}
-  clearTimeout(resignArm);resignArm=0;gid++;busy=false;
+  clearTimeout(resignArm);resignArm=0;stopAI();gid++;busy=false;
   const w=3-cur;phase='done';terr=null;scoreInfo=null;
   result={resign:true,winner:w,text:mode==='pvc'?(w===human()?'电脑认输，你赢啦！':'你认输了，再来一局吧'):`${NAMES[cur-1]}认输，${NAMES[w-1]}胜`};
   setStatus();kick()}
@@ -334,67 +414,39 @@ function confirmScore(){
   if(w){spawnPetals(0,0,true,0)}
   kick()}
 
-// ================= 电脑：规则启发 + 蒙特卡洛 =================
-function isEye(b,i,col){const nb=NB[i];for(let q=0;q<nb.length;q++)if(b[nb[q]]!==col)return false;
-  const dg=DG[i];let bad=0;for(let q=0;q<dg.length;q++)if(b[dg[q]]!==col)bad++;return dg.length<4?bad===0:bad<=1}
-function playout(b0,col){
-  const b=Int8Array.from(b0);let ps=0,n=0;const lim=N2*2;
-  while(ps<2&&n<lim){let moved=false;const s=(Math.random()*N2)|0;
-    for(let k=0;k<N2;k++){let i=s+k;if(i>=N2)i-=N2;if(b[i]!==0||isEye(b,i,col))continue;if(playMove(b,i,col,null)>=0){moved=true;break}}
-    ps=moved?0:ps+1;col=3-col;n++}
-  const sc=scoreBoard(b,null);return sc.bs+sc.bt-sc.ws-sc.wt}
-function thinkThen(){busy=true;setStatus();const id=gid;setTimeout(()=>{if(id===gid)aiThink(id)},220)}
-function aiThink(id){
-  const ac=aiColor(),oc=3-ac;
-  let stones=0;for(let i=0;i<N2;i++)if(bd[i])stones++;
-  const cands=[];
-  for(let i=0;i<N2;i++){
-    if(bd[i])continue;
-    const res=tryMove(i,ac);if(res.err)continue;
-    const cap=res.caps.length;
-    if(cap===0&&isEye(bd,i,ac))continue;
-    let h=cap*6;
-    const libs=chainF(res.b,i);
-    if(libs===1)h+=cap?-2:-10;else if(libs>=3)h+=1;
-    const nb=NB[i];let own=0;
-    for(let q=0;q<nb.length;q++){const j=nb[q];
-      if(bd[j]===ac){own++;if(chainF(bd,j)===1&&libs>=2)h+=8}   // 救自己被打吃的子
-      else if(res.b[j]===oc&&chainF(res.b,j)===1)h+=3}          // 打吃对方
-    if(own===nb.length)h-=3;                                       // 别往自己地里填
-    const r=Math.floor(i/N),c=i%N,d=Math.min(r,c,N-1-r,N-1-c);
-    h+=d===0?-3:d===1?-.5:.5;
-    if(stones<4)h-=(Math.abs(r-(N-1)/2)+Math.abs(c-(N-1)/2))*.4;
-    else{let near=false;for(let dr=-2;dr<=2&&!near;dr++)for(let dc=-2;dc<=2;dc++){const a=r+dr,b2=c+dc;if(a>=0&&a<N&&b2>=0&&b2<N&&bd[a*N+b2]){near=true;break}}if(!near)h-=2}
-    h+=Math.random()*.8;
-    cands.push({i,res,h,wins:0,n:0})}
-  if(!cands.length){busy=false;doPass();return}
-  cands.sort((a,b)=>b.h-a.h);
-  const top=cands.slice(0,14),t0=performance.now(),BUDGET=520;
-  function step(){
-    if(id!==gid)return;
-    const ts=performance.now();
-    do{for(const c of top){const d=playout(c.res.b,oc)-KOMI[N];const win=ac===1?d>0:d<0;c.n++;if(win)c.wins++}}
-    while(performance.now()-ts<40&&performance.now()-t0<BUDGET);
-    if(performance.now()-t0<BUDGET)setTimeout(step,0);else finish()}
-  function finish(){
-    if(id!==gid)return;
-    let best=top[0],bs=-1e9;
-    for(const c of top){const s=(c.n?c.wins/c.n:.5)*100+c.h*1.5;c.wr=c.n?c.wins/c.n:.5;if(s>bs){bs=s;best=c}}
+// ================= 电脑：后台线程思考（引擎源码见上面 #engine），失败就在页面里算 =================
+const BUDGET={9:950,13:1050,19:1150};
+let worker=null,pending=null;const aiLog=[];
+function mkWorker(){try{const src=$('engine').textContent+'\nonmessage=e=>{postMessage(Object.assign({id:e.data.id},think(e.data)))}';
+  worker=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
+  worker.onmessage=e=>onAI(e.data);
+  worker.onerror=e=>{e.preventDefault&&e.preventDefault();worker=null;if(pending)runLocal(pending)}}catch(e){worker=null}}
+mkWorker();
+function stopAI(){if(pending&&worker){worker.terminate();worker=null;mkWorker()}pending=null}
+function runLocal(p){setTimeout(()=>{if(p.id!==gid)return;onAI(Object.assign({id:p.id},think(p.req)))},30)}
+function thinkThen(){busy=true;setStatus();const L=snaps.length;
+  pending={id:gid,t0:performance.now(),req:{id:gid,n:N,b:Array.from(bd),col:aiColor(),komi:KOMI[N],passes,prev:L>=2?Array.from(snaps[L-2].b):null,budget:BUDGET[N]}};
+  if(worker)worker.postMessage(pending.req);else runLocal(pending)}
+function onAI(r){if(!pending||r.id!==pending.id||r.id!==gid)return;const p=pending;pending=null;
+  const wait=Math.max(0,300-(performance.now()-p.t0));
+  setTimeout(()=>{if(p.id!==gid)return;
+    aiLog.push({ms:Math.round(r.ms),total:Math.round(performance.now()-p.t0),move:r.move,why:r.why,po:r.po,est:r.est,stat:r.stat,n:N});
     busy=false;
-    if(passes===1&&best.wr>.55){doPass();return}
-    commit(best.i,best.res)}
-  step()}
+    if(r.move>=0){const res=tryMove(r.move,aiColor());if(!res.err){commit(r.move,res);return}}
+    doPass();if(phase==='play')flash('电脑停了一手，轮到你')},wait)}
 
 // ================= 控件 =================
 function syncModeBtns(){document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on',x.dataset.m===mode));$('pvcOpts').classList.toggle('hidden',mode!=='pvc');
   document.querySelector('#modeSeg [data-m=pvc]').classList.toggle('off',N!==9)}
 $('modeSeg').onclick=e=>{const b=e.target.closest('button');if(!b||b.dataset.m===mode)return;
   if(b.dataset.m==='pvc'&&N!==9){flash('和电脑下目前只有 9 路');return}
-  mode=b.dataset.m;syncModeBtns();reset()};
+  mode=b.dataset.m;autoPvp=false;syncModeBtns();reset()};
 $('sizeSeg').onclick=e=>{const b=e.target.closest('button');if(!b||+b.dataset.n===N)return;
   document.querySelectorAll('#sizeSeg button').forEach(x=>x.classList.toggle('on',x===b));
-  setupBoard(+b.dataset.n);if(N!==9&&mode==='pvc')mode='pvp';syncModeBtns();reset();
-  if(N!==9)flash('和电脑下目前只有 9 路，已切换为两人同下')};
+  setupBoard(+b.dataset.n);let msg='';
+  if(N!==9&&mode==='pvc'){mode='pvp';autoPvp=true;msg='和电脑下目前只有 9 路，已切换为两人同下'}
+  else if(N===9&&autoPvp){mode='pvc';autoPvp=false;msg='回到 9 路，接着和电脑下'}
+  syncModeBtns();reset();if(msg)flash(msg)};
 $('side').onchange=reset;
 $('restart').onclick=reset;
 $('undo').onclick=undo;

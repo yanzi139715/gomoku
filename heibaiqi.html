@@ -81,7 +81,7 @@ select:focus{outline:none;border-color:var(--ink)}
 <a class="back" href="./">‹ 桃源弈</a>
 <button class="help" id="helpBtn" aria-label="规则说明">?</button>
 <div class="rules-mask" id="rulesMask" role="dialog" aria-modal="true" aria-label="黑白棋怎么下"><div class="rules"><h3>黑白棋怎么下</h3><h4>怎么赢</h4><p>棋盘是 8×8 的格子，墨莓和珍珠轮流落子，墨莓先下。棋盘下满（或者双方都没地方可下）时，谁的子多，谁就赢。</p>
-<h4>怎么下</h4><ul><li>开局中间有四颗子，墨莓、珍珠交叉摆着。</li><li>每一步必须<b>夹住</b>对方的子：从你落下的格子出发，横、竖、斜任意一个方向，只要「中间连着的全是对方的子、尽头是你自己的子」，中间那些子就被夹住，<b>全部翻成你的颜色</b>。</li><li>一步可以同时向好几个方向夹，一起翻。</li><li>落点要落在<b>格子里</b>。淡淡的小桃花，就是现在能下的地方；如果一个也夹不住，这一手就不能下。</li><li>在手机上，点一下会先出现一个虚影，并圈出会被翻的子，在同一处再点一次才真正落下。</li><li>没有地方可下的时候，会自动停一手，轮到对方；双方都无处可下，棋局就结束了。</li></ul>
+<h4>怎么下</h4><ul><li>开局中间有四颗子，墨莓、珍珠交叉摆着。</li><li>每一步必须<b>夹住</b>对方的子：从你落下的格子出发，横、竖、斜任意一个方向，只要「中间连着的全是对方的子、尽头是你自己的子」，中间那些子就被夹住，<b>全部翻成你的颜色</b>。</li><li>一步可以同时向好几个方向夹，一起翻。</li><li>落点要落在<b>格子里</b>。格子里的小桃花，就是现在能下的地方；如果一个也夹不住，这一手就不能下。</li><li>在手机上，点一下会先出现一个虚影，并圈出会被翻的子，在同一处再点一次才真正落下。</li><li>没有地方可下的时候，会自动停一手，轮到对方；双方都无处可下，棋局就结束了。</li></ul>
 <h4>小窍门</h4><ul><li><b>四个角最宝贵</b>：角上的子永远不会被翻走。</li><li>角旁边的格子先别急着下，那样容易把角送给对方。</li><li>前期别贪多，子翻得越多，自己能下的地方反而越少；少而稳，最后再翻回来。</li></ul><button class="close">知道啦</button></div></div>
 <div class="title">桃 · 黑白棋</div>
 <div class="sub">一翻一落，墨白相映</div>
@@ -135,7 +135,7 @@ function drawBg(){
   ctx.strokeStyle='rgba(170,100,120,.42)';ctx.lineWidth=.8;
   for(let k=0;k<=N;k++){const p=PAD+k*CELL;ctx.beginPath();ctx.moveTo(PAD,p);ctx.lineTo(PAD+N*CELL,p);ctx.stroke();ctx.beginPath();ctx.moveTo(p,PAD);ctx.lineTo(p,PAD+N*CELL);ctx.stroke()}
   ctx.strokeStyle='rgba(170,100,120,.55)';ctx.lineWidth=1.3;ctx.strokeRect(PAD,PAD,N*CELL,N*CELL);
-  for(const a of[2,6])for(const b of[2,6])petalFlower(PAD+a*CELL,PAD+b*CELL,5.6)
+  for(const a of[2,6])for(const b of[2,6]){ctx.fillStyle='rgba(214,110,138,.55)';ctx.beginPath();ctx.arc(PAD+a*CELL,PAD+b*CELL,2.4,0,7);ctx.fill()}  // 四个小圆点作标记；桃花只留给「这里能下」的提示
 }
 function blob(x,y,r,col,a){const b=ctx.createRadialGradient(x,y,0,x,y,r);b.addColorStop(0,col.replace('A',a));b.addColorStop(1,col.replace('A',0));ctx.fillStyle=b;ctx.fillRect(x-r,y-r,r*2,r*2)}
 function drawShadow(x,y,p,s,lift=0){const R=R0*s,t=p===1?'70,25,45':'150,110,130',off=1+lift*1.6,sp=1+lift*.35,a=1-lift*.55;
@@ -178,7 +178,7 @@ function frame(t){
   for(const[x,y,p,s,l,u,sx]of D){ctx.save();ctx.translate(x,0);ctx.scale(sx,1);ctx.translate(-x,0);drawStone(x,y-u,p,s);ctx.restore()}
   if(lastI>=0&&g[lastI]&&!over){const{x,y}=P(lastI);ctx.fillStyle='#e8899e';ctx.beginPath();ctx.arc(x,y,2.8,0,7);ctx.fill()}
   const cp=canPlay();
-  if(cp&&hintOn){for(const i of legalMoves(g,cur)){const{x,y}=P(i);ctx.globalAlpha=.5;petalFlower(x,y,4);ctx.globalAlpha=1}}
+  if(cp&&hintOn){for(const i of legalMoves(g,cur)){const{x,y}=P(i);ctx.globalAlpha=.75;petalFlower(x,y,4.6);ctx.globalAlpha=1}}
   const pv=touchPending!=null?touchPending:hover;
   if(cp&&pv!=null&&canAt(g,pv,cur)){const i=pv,{x,y}=P(i);ctx.globalAlpha=touchPending?.6:.4;drawShadow(x,y,cur,.9);drawStone(x,y,cur,.9);ctx.globalAlpha=1;
     ctx.strokeStyle='rgba(214,110,138,.7)';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);

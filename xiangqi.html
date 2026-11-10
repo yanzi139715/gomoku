@@ -85,7 +85,7 @@ select:focus{outline:none;border-color:var(--ink)}
 <li><b>车</b>：横竖直走，多少格都行，但不能越过别的子。</li>
 <li><b>炮</b>：平时和车一样走；吃子时必须隔着一个子跳过去吃（翻山）。</li>
 <li><b>兵 / 卒</b>：只能往前一格；过了河以后还可以左右走一格，但永远不能后退。</li></ul>
-<h4>特别规定</h4><ul><li>两边的将和帅不能在同一条竖线上直接面对面（中间没有子挡着）。</li><li>不能走一步让自己的将帅被吃（送将）。</li><li>被将军时状态栏会提醒你，必须先解围。</li><li>连续 60 回合都没人吃子，算和棋。</li></ul><button class="close">知道啦</button></div></div>
+<h4>特别规定</h4><ul><li>两边的将和帅不能在同一条竖线上直接面对面（中间没有子挡着）。</li><li>不能走一步让自己的将帅被吃（送将）。</li><li>被将军时状态栏会提醒你，必须先解围。</li><li>连续 60 回合都没人吃子，算和棋。</li><li>一盘棋走满 400 步还没分出胜负，算和棋。</li><li>同一个局面（同样的摆法、轮到同一方走）出现第 3 次时：如果这期间一方每一步都在将军，就是「长将」，长将的一方判负；两边都在长将或都没有长将，算和棋。</li></ul><button class="close">知道啦</button></div></div>
 <div class="title">桃 · 象棋</div>
 <div class="sub">隔一道楚河，写一封长信</div>
 
@@ -172,7 +172,10 @@ function legal(side){const ms=gen(side,false,[]),out=[];for(const m of ms){const
 const MATE=30000,INF=99999,OV=[0,1000,120,120,270,600,285,30];
 const TTB=1<<19,TTM=TTB-1,tK=new Int32Array(TTB),tM=new Int32Array(TTB),tS=new Int32Array(TTB),tD=new Int8Array(TTB),tF=new Int8Array(TTB);
 const KIL=new Int32Array(256),HIS=new Int32Array(16384);
-let nodes=0,stop=false,deadline=0,rootBest=0,H=[];
+let nodes=0,stop=false,deadline=0,rootBest=0,H=[],HC=[];// H：走过的局面指纹；HC：从那个局面走的那一步有没有将军
+// 回到走过的局面：这期间只有一方步步将军＝长将，长将方判负；否则当和棋
+const REP=20000;
+function repScore(i){let me=true,op=true;for(let k=i;k<H.length;k+=2)if(!HC[k]){me=false;break}for(let k=i+1;k<H.length;k+=2)if(!HC[k]){op=false;break}return me===op?0:me?-REP:REP}
 function order(ms,ttm,ply){const n=ms.length,ss=new Int32Array(n);
   for(let i=0;i<n;i++){const m=ms[i],q=B[m&127];
     ss[i]=m===ttm?1e8:q?1e7+OV[q>0?q:-q]*10-OV[Math.abs(B[m>>7])]:(m===KIL[ply*2]||m===KIL[ply*2+1])?9e6:HIS[m]}
@@ -187,17 +190,17 @@ function qs(alpha,beta,ply,qd){
   return alpha}
 function search(depth,alpha,beta,ply,chk){
   if((++nodes&1023)===0&&Date.now()>deadline)stop=true;if(stop)return 0;
-  if(ply>0){for(let i=H.length-2;i>=0&&i>=H.length-120;i-=2)if(H[i]===hLo)return 0}// 重复局面当和
+  if(ply>0){for(let i=H.length-2;i>=0&&i>=H.length-120;i-=2)if(H[i]===hLo)return repScore(i)}// 重复局面：和棋，或长将方输
   if(depth<=0||ply>=100)return qs(alpha,beta,ply,0);
   const idx=hLo&TTM;let ttm=0;
   if(tK[idx]===hHi){ttm=tM[idx];if(ply>0&&tD[idx]>=depth){let s=tS[idx];if(s>MATE-300)s-=ply;else if(s<-MATE+300)s+=ply;const f=tF[idx];if(f===0||(f===1&&s>=beta)||(f===2&&s<=alpha))return s}}
   const ms=gen(stm,false,[]),ss=order(ms,ttm,ply),me=stm,a0=alpha;let best=-INF,bm=0,lg=0;
   for(let i=0;i<ms.length;i++){const m=pick(ms,ss,i);H.push(hLo);const q=make(m);
     if(inCheck(me)){unmake(m,q);H.pop();continue}
-    lg++;const gc=inCheck(stm),d=depth-1+(gc&&ply<24?1:0);let s;
+    lg++;const gc=inCheck(stm);HC.push(gc?1:0);const d=depth-1+(gc&&ply<24?1:0);let s;
     if(lg===1)s=-search(d,-beta,-alpha,ply+1,gc);
     else{const r=(!q&&!chk&&!gc&&depth>=3&&lg>4)?1:0;s=-search(d-r,-alpha-1,-alpha,ply+1,gc);if(!stop&&s>alpha&&(r||s<beta))s=-search(d,-beta,-alpha,ply+1,gc)}
-    unmake(m,q);H.pop();if(stop)return 0;
+    unmake(m,q);H.pop();HC.pop();if(stop)return 0;
     if(s>best){best=s;bm=m;if(ply===0)rootBest=m}
     if(s>alpha){alpha=s;if(s>=beta){if(!q){if(KIL[ply*2]!==m){KIL[ply*2+1]=KIL[ply*2];KIL[ply*2]=m}HIS[m]+=depth*depth}break}}}
   if(!lg)return -MATE+ply;// 将死或困毙都算输
@@ -206,12 +209,12 @@ function search(depth,alpha,beta,ply,chk){
   return best}
 // level：easy 浅算＋随机，medium 最多 4 层，hard 迭代加深到时间用完
 const LEVELS={easy:[1,500],medium:[5,700],hard:[40,1200]};
-function think(level,hist){H=hist.slice();nodes=0;stop=false;const t0=Date.now();
+function think(level,hist,hc){H=hist.slice();HC=hc&&hc.length===H.length?hc.slice():H.map(()=>0);nodes=0;stop=false;const t0=Date.now();
   const L=legal(stm);if(!L.length)return{move:0,depth:0,ms:0,nodes:0};
   if(L.length===1)return{move:L[0],depth:0,ms:Date.now()-t0,nodes:0};
   const[maxD,lim]=LEVELS[level]||LEVELS.medium;deadline=t0+lim;KIL.fill(0);HIS.fill(0);
   if(level==='easy'){let bm=L[0],bs=-INF;
-    for(const m of L){H.push(hLo);const q=make(m);const s=-search(maxD,-INF,INF,1,inCheck(stm))+Math.random()*150;unmake(m,q);H.pop();if(stop)break;if(s>bs){bs=s;bm=m}}
+    for(const m of L){H.push(hLo);const q=make(m);const gc=inCheck(stm);HC.push(gc?1:0);const s=-search(maxD,-INF,INF,1,gc)+Math.random()*150;unmake(m,q);H.pop();HC.pop();if(stop)break;if(s>bs){bs=s;bm=m}}
     return{move:bm,depth:maxD+1,ms:Date.now()-t0,nodes}}
   rootBest=L[0];let dd=0;const chk=inCheck(stm);
   for(let d=1;d<=maxD;d++){const s=search(d,-INF,INF,0,chk);if(stop)break;dd=d;if(Math.abs(s)>MATE-100)break;if(Date.now()-t0>lim*.5)break}
@@ -229,7 +232,7 @@ cv.width=W*DPR;cv.height=Ht*DPR;ctx.scale(DPR,DPR);
 const NAME=s=>s>0?'红方':'黑方';
 const CH={1:'帅',2:'仕',3:'相',4:'傌',5:'俥',6:'炮',7:'兵','-1':'将','-2':'士','-3':'象','-4':'马','-5':'车','-6':'炮','-7':'卒'};
 const FONT='"Noto Serif SC","Songti SC","STSong",serif';
-let gid=0,game=[],hashHist=[],over=false,winner=0,reason='',busy=false,sel=-1,targets=[],winT=0,parts=[],mode='pvc',anim=null;
+let gid=0,game=[],startKey='',over=false,winner=0,reason='',busy=false,sel=-1,targets=[],winT=0,parts=[],mode='pvc',anim=null;
 const rand=(a,b)=>a+Math.random()*(b-a);
 const human=()=>+document.getElementById('side').value;
 const aiSide=()=>-human();
@@ -337,22 +340,32 @@ function setStatus(){const el=document.getElementById('status');el.classList.tog
     const who=mode==='pvc'?(stm===human()?(chk?'快应将':'轮到你（'+NAME(stm)+'）'):NAME(stm)+'在想'):(chk?NAME(stm)+'应将':'轮到'+NAME(stm));
     el.innerHTML=dot(stm)+' '+(chk?'<span class="check">将军</span> · ':'')+who+(busy?'<span class="thinking"><i></i><i></i><i></i></span>':'')}
   else if(winner){el.innerHTML=dot(winner)+' '+(mode==='pvc'?(winner===human()?reason+'，你赢啦！':reason+'，'+NAME(winner)+'赢了，再来一局吧'):reason+'，'+NAME(winner)+'赢啦！')}
-  else el.textContent='和棋 · 握手言和';
+  else el.textContent=(reason?reason+'，':'')+'和棋 · 握手言和';
   const h=human();document.getElementById('undo').disabled=busy&&mode==='pvp'||!(mode==='pvc'?game.some(g=>g.side===h):game.length)}
 function stopAI(){if(busy&&worker){worker.terminate();worker=null;mkWorker()}busy=false}
 function reset(){
   if(game.length)sfx('pearlGather',.8,1);
-  stopAI();gid++;setPos(INIT,1);game=[];hashHist=[];over=false;winner=0;reason='';sel=-1;targets=[];winT=0;parts=[];anim=null;
+  stopAI();gid++;setPos(INIT,1);game=[];startKey=hLo+','+hHi;over=false;winner=0;reason='';sel=-1;targets=[];winT=0;parts=[];anim=null;
   setStatus();kick();
   if(mode==='pvc'&&aiSide()===1)thinkThen()}
 function checkEnd(){
-  if(!legal(stm).length){over=true;winner=-stm;reason=inCheck(stm)?'将死':'困毙';
-    winT=performance.now()+DUR;const k=P(kS[winner>0?0:1]);setTimeout(()=>{if(winT){spawnPetals(k.x,k.y,true);kick()}},DUR);
-    [P(kS[winner<0?0:1])].forEach((p,i)=>setTimeout(()=>{if(winT){spawnPetals(p.x,p.y,false);kick()}},DUR+260));return}
+  if(!legal(stm).length){over=true;winner=-stm;reason=inCheck(stm)?'将死':'困毙';celebrate();return}
   let quiet=0;for(let i=game.length-1;i>=0&&!game[i].q;i--)quiet++;
-  if(quiet>=120||game.length>=400){over=true;winner=0}}// 六十回合不吃子或太长，判和
+  if(quiet>=120){over=true;winner=0;reason='六十回合没吃子';return}
+  if(checkRep())return;
+  if(game.length>=400){over=true;winner=0;reason='走满 400 步'}}
+function celebrate(){winT=performance.now()+DUR;const k=P(kS[winner>0?0:1]);setTimeout(()=>{if(winT){spawnPetals(k.x,k.y,true);kick()}},DUR);
+  [P(kS[winner<0?0:1])].forEach((p,i)=>setTimeout(()=>{if(winT){spawnPetals(p.x,p.y,false);kick()}},DUR+260))}
+// 同一局面（同一方走）第 3 次出现：这期间只有一方步步将军就判它负（长将），否则和棋
+function checkRep(){const n=game.length;if(!n)return false;const key=game[n-1].k,at=[];
+  let lc=-1;for(let k=n-1;k>=0;k--)if(game[k].q){lc=k;break}// 吃子以前的局面不可能再出现
+  for(let j=n;j>lc;j-=2)if((j?game[j-1].k:startKey)===key)at.push(j);
+  if(at.length<3)return false;const j0=at[2];let red=true,blk=true;
+  for(let k=j0;k<n;k++)if(!game[k].chk){if(game[k].side>0)red=false;else blk=false}
+  over=true;if(red!==blk){const loser=red?1:-1;winner=-loser;reason=NAME(loser)+'长将，判负';celebrate()}else{winner=0;reason='局面重复三次'}
+  return true}
 function doMove(m){const side=stm;sel=-1;targets=[];
-  hashHist.push(hLo);const q=make(m);game.push({m,q,side});
+  const hb=hLo,q=make(m);game.push({m,q,side,hb,k:hLo+','+hHi,chk:inCheck(stm)});
   anim={from:m>>7,to:m&127,cap:q,t:performance.now()};
   setTimeout(()=>{clack(side);if(q)setTimeout(()=>sfx('pearlPick',.55,1.05),40)},DUR-30);
   checkEnd();setStatus();kick();
@@ -360,20 +373,20 @@ function doMove(m){const side=stm;sel=-1;targets=[];
 
 // ================= 电脑：后台线程思考，失败就在页面里算 =================
 let worker=null,pending=null;
-function mkWorker(){try{const src=document.getElementById('engine').textContent+'\nonmessage=e=>{const d=e.data;setPos(d.board,d.stm);postMessage(Object.assign({id:d.id},think(d.level,d.hist)))}';
+function mkWorker(){try{const src=document.getElementById('engine').textContent+'\nonmessage=e=>{const d=e.data;setPos(d.board,d.stm);postMessage(Object.assign({id:d.id},think(d.level,d.hist,d.hc)))}';
   worker=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
   worker.onmessage=e=>onAI(e.data);
   worker.onerror=e=>{e.preventDefault&&e.preventDefault();worker=null;if(pending)runLocal(pending)}}catch(e){worker=null}}
 mkWorker();
-function runLocal(req){setTimeout(()=>{if(req.id!==gid)return;const snap=Array.from(B),s=stm;const r=think(req.level,req.hist);setPos(snap,s);onAI(Object.assign({id:req.id},r))},30)}
+function runLocal(req){setTimeout(()=>{if(req.id!==gid)return;const snap=Array.from(B),s=stm;const r=think(req.level,req.hist,req.hc);setPos(snap,s);onAI(Object.assign({id:req.id},r))},30)}
 const aiLog=[];
 function onAI(r){if(!pending||r.id!==pending.id||r.id!==gid)return;const req=pending;pending=null;
   aiLog.push({ms:r.ms,depth:r.depth,nodes:r.nodes,level:req.level});
   const wait=Math.max(0,420-(performance.now()-req.t0));
   setTimeout(()=>{if(req.id!==gid)return;busy=false;if(r.move)doMove(r.move);else setStatus()},wait)}
 function thinkThen(){busy=true;setStatus();
-  pending={id:gid,level:document.getElementById('diff').value,hist:hashHist.slice(),t0:performance.now()};
-  if(worker)worker.postMessage({id:pending.id,board:Array.from(B),stm,hist:pending.hist,level:pending.level});else runLocal(pending)}
+  pending={id:gid,level:document.getElementById('diff').value,hist:game.map(g=>g.hb),hc:game.map(g=>g.chk?1:0),t0:performance.now()};
+  if(worker)worker.postMessage({id:pending.id,board:Array.from(B),stm,hist:pending.hist,hc:pending.hc,level:pending.level});else runLocal(pending)}
 
 // ================= 点棋盘 =================
 function toSq(e){const rc=cv.getBoundingClientRect(),mx=(e.clientX-rc.left)*(W/rc.width),my=(e.clientY-rc.top)*(Ht/rc.height);
@@ -401,9 +414,9 @@ function syncSound(){document.getElementById('sound').textContent=soundOn?'声�
 // ================= 悔棋：和电脑下时退回到你上一步之前 =================
 function undo(){if(!game.length)return;
   if(mode==='pvc'){const h=human();if(!game.some(g=>g.side===h))return;stopAI();pending=null;
-    while(game[game.length-1].side!==h){const g=game.pop();unmake(g.m,g.q);hashHist.pop()}
-    const g=game.pop();unmake(g.m,g.q);hashHist.pop()}
-  else{const g=game.pop();unmake(g.m,g.q);hashHist.pop()}
+    while(game[game.length-1].side!==h){const g=game.pop();unmake(g.m,g.q)}
+    const g=game.pop();unmake(g.m,g.q)}
+  else{const g=game.pop();unmake(g.m,g.q)}
   gid++;busy=false;over=false;winner=0;reason='';winT=0;parts=[];anim=null;sel=-1;targets=[];sfx('pearlPick',.7,1);setStatus();kick()}
 
 // ================= 控件 =================
