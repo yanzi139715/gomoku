@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>飞行棋 · 桃源弈</title>
+<meta name="description" content="一盘桃花信笺风格的中国飞行棋，可以和电脑玩，也可以和朋友同玩。">
+<meta name="theme-color" content="#fbf1f0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='26' fill='%23f8e2e4' stroke='%23e6c3ca' stroke-width='2'/%3E%3Cpath d='M32 14L47 46L33 40L32 50L31 40L17 46Z' fill='%23d9577f' opacity='.7'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#fbf1f0;--ink:#8a4a5c;--soft:#b98593;--line:#e6c3ca;--btn:#8a4a5c;--btnInk:#fbf1f0;--rouge:#c0405a;--dc:#e6c3ca}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:36px 16px 40px;overflow-x:hidden;
+  background:var(--bg);color:var(--ink);font-family:'Noto Serif SC','Songti SC',serif;
+  background-image:radial-gradient(ellipse at 15% 10%,rgba(240,190,200,.35),transparent 50%),radial-gradient(ellipse at 90% 90%,rgba(220,200,230,.35),transparent 50%);
+  animation:fadein .9s ease both}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.title{font-size:36px;font-weight:300;letter-spacing:16px;text-indent:16px;user-select:none;line-height:1.2;text-align:center}
+.sub{font-size:13px;letter-spacing:3px;color:var(--soft);margin:10px 0 22px;text-align:center}
+.controls{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:16px}
+.seg{display:flex}
+.seg button{font-family:inherit;font-size:13px;letter-spacing:2px;padding:7px 18px;border:1.5px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);cursor:pointer;transition:background .2s,color .2s;border-radius:0}
+.seg button+button{border-left:none}
+.seg button.on{background:var(--btn);color:var(--btnInk);border-color:var(--btn)}
+.subrow{display:flex;gap:8px 12px;flex-wrap:wrap;justify-content:center}
+.seat{display:flex;align-items:center;gap:6px;font-size:13px;letter-spacing:1px}
+select{font-family:inherit;font-size:13px;letter-spacing:1px;color:var(--ink);background:rgba(255,255,255,.7);border:1.5px solid var(--line);padding:6px 28px 6px 10px;cursor:pointer;appearance:none;-webkit-appearance:none;border-radius:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23b98593'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center}
+select:focus{outline:none;border-color:var(--ink)}
+.status{min-height:28px;font-size:15px;letter-spacing:2px;color:var(--soft);margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;user-select:none;text-align:center;max-width:100%}
+.status.win{color:var(--ink);font-size:17px}
+@media(max-width:440px){.status{font-size:13.5px;letter-spacing:1px}.status.win{font-size:15px}}
+.dot{width:16px;height:16px;border-radius:50%;display:inline-block;box-shadow:0 0 0 1px rgba(0,0,0,.08);flex:none}
+.thinking{display:inline-flex;gap:3px;margin-left:2px}
+.thinking i{width:4px;height:4px;border-radius:50%;background:var(--soft);animation:blink 1.2s infinite}
+.thinking i:nth-child(2){animation-delay:.2s}.thinking i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+.frame{padding:12px;background:#fffaf8;border-radius:4px;box-shadow:0 1px 0 #e6c3ca,0 10px 34px rgba(140,70,90,.12)}
+#board{display:block;width:min(calc(100vw - 56px),548px);height:auto;cursor:default;touch-action:manipulation;border-radius:2px;-webkit-tap-highlight-color:transparent}
+.diceRow{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:20px;min-height:72px}
+.dice{width:64px;height:64px;flex:none;position:relative;background:none;border:none;padding:0;cursor:default;perspective:420px;-webkit-tap-highlight-color:transparent}
+/* 骰子下面一抹当前玩家颜色的柔光，代替原来的彩色边框 */
+.dice::after{content:'';position:absolute;left:4px;right:4px;bottom:-12px;height:14px;border-radius:50%;background:radial-gradient(closest-side,var(--dca),transparent);transition:opacity .3s}
+.dice canvas{width:64px;height:64px;display:block}
+.dice.ready{cursor:pointer;animation:ready 1.6s ease-in-out infinite}
+@keyframes ready{0%,100%{transform:none}50%{transform:translateY(-3px)}}
+.dice.roll{animation:tumble .7s ease-out}
+@keyframes tumble{0%{transform:none}20%{transform:translateY(-16px) rotate(-30deg) scale(1.08)}45%{transform:translateY(0) rotate(24deg)}65%{transform:translateY(-6px) rotate(-12deg) scale(1.03)}85%{transform:translateY(0) rotate(5deg)}100%{transform:none}}
+.diceHint{font-size:13px;letter-spacing:2px;color:var(--soft);min-width:116px;line-height:1.7;user-select:none}
+@media(max-width:440px){.diceHint{min-width:0;max-width:160px;letter-spacing:1px}}
+.actions{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;justify-content:center}
+.restart{font-family:inherit;font-size:14px;letter-spacing:4px;padding:9px 30px;border:1.5px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);cursor:pointer;transition:background .2s,color .2s}
+@media(max-width:440px){.restart{padding:8px 16px;letter-spacing:2px;font-size:13px}}
+.restart:not(:disabled):hover{background:var(--btn);color:var(--btnInk);border-color:var(--btn)}
+.footer{margin-top:34px;font-size:11px;letter-spacing:4px;color:var(--line);user-select:none}
+.hidden{display:none!important}
+.back{position:absolute;top:14px;left:16px;z-index:5;font-size:13px;letter-spacing:3px;color:var(--soft);text-decoration:none;padding:6px 10px 6px 4px;font-family:inherit}
+.back:hover{color:var(--ink)}
+.help{position:absolute;top:12px;right:16px;z-index:5;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);font-family:inherit;font-size:16px;line-height:1;cursor:pointer;transition:background .2s,color .2s}
+.help:hover{background:var(--ink);color:#fbf1f0;border-color:var(--ink)}
+.rules-mask{position:fixed;inset:0;background:rgba(120,60,80,.18);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50;opacity:0;pointer-events:none;transition:opacity .25s}
+.rules-mask.on{opacity:1;pointer-events:auto}
+.rules{background:#fffaf8;max-width:440px;width:100%;max-height:84vh;overflow:auto;padding:26px 22px 20px;box-shadow:0 20px 50px rgba(140,70,90,.22);border-radius:4px;color:var(--ink);transform:translateY(10px);transition:transform .25s;text-align:left}
+.rules-mask.on .rules{transform:none}
+.rules h3{font-weight:400;font-size:20px;letter-spacing:8px;text-indent:8px;text-align:center;margin-bottom:6px}
+.rules h4{font-weight:600;font-size:14px;letter-spacing:2px;margin:16px 0 4px}
+.rules p,.rules li{font-size:13.5px;line-height:1.85;letter-spacing:.5px;color:#7a4a58}
+.rules ul{padding-left:1.2em}.rules li{margin:2px 0}.rules b{font-weight:600;color:var(--ink)}
+.rules .close{display:block;margin:20px auto 0;font-family:inherit;font-size:14px;letter-spacing:4px;padding:8px 30px;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+</style>
+</head>
+<body>
+<a class="back" href="./">‹ 桃源弈</a>
+<button class="help" id="helpBtn" aria-label="规则说明">?</button>
+<div class="rules-mask" id="rulesMask" role="dialog" aria-modal="true" aria-label="飞行棋怎么玩"><div class="rules"><h3>飞行棋怎么玩</h3>
+<p>四种颜色的飞机，各有 4 架停在自己角上的机场里。谁先把 4 架飞机全部送到中央的大桃花，谁就赢。</p>
+<h4>起飞</h4><ul><li>掷到 <b>6</b>，才能把一架飞机从机场开到自己颜色的<b>起飞点</b>（机场门口颜色最深、有小飞机标记的那一格）。</li>
+<li>掷到 6 的人<b>可以再掷一次</b>。连续掷出三个 6，第三个不算数，直接换下一位。</li></ul>
+<h4>怎么走</h4><ul><li>每回合掷一次骰子，选一架飞机，点数是几就<b>顺时针</b>走几格。</li>
+<li>绕外圈走完一整圈（50 格）后，拐进自己颜色的<b>终点跑道</b>，一直走到中央。</li></ul>
+<h4>跳子</h4><ul><li>如果飞机停在<b>和自己同色</b>的格子上，会自动向前跳到下一个同色格（刚好 4 格）。</li></ul>
+<h4>飞棋</h4><ul><li>每个角的外沿有一条粉色<b>虚线</b>，连着两个同色格，上面各有一只小纸飞机。只有那个颜色的飞机停在虚线起点（不论是走到、还是跳到），才会顺着虚线<b>飞过去</b>（一次飞 12 格）。</li>
+<li>一次移动里，最多跳一次、飞一次。</li></ul>
+<h4>撞飞机</h4><ul><li>停在别人飞机所在的格子（包括跳、飞落脚的格子，也包括起飞点），对方的飞机就被<b>撞回机场</b>，要重新掷 6。</li>
+<li>同色的飞机可以叠在一起，互不影响。</li></ul>
+<h4>回到终点</h4><ul><li>必须<b>正好</b>走到中央才算到达；点数多出来的部分，要从终点<b>往回退</b>。</li></ul>
+<h4>谁和谁玩</h4><ul><li>开局选 2、3、4 人，每个颜色可以设成「我」「朋友」「电脑」。「我」和「朋友」都是在这个屏幕上点；轮到谁，就亮起谁的颜色。</li>
+<li>轮到你时，点骰子掷；有好几架飞机能走时，亮着光圈的飞机就是能走的，点一下它；只有一种走法时会自动走。</li></ul>
+<button class="close">知道啦</button></div></div>
+<div class="title">桃 · 飞行棋</div>
+<div class="sub">纸鸢掠过，桃花满枝</div>
+
+<div class="controls">
+  <div class="seg" id="cntSeg"><button data-n="2">二人</button><button data-n="3">三人</button><button class="on" data-n="4">四人</button></div>
+  <div class="subrow" id="seats"></div>
+</div>
+
+<div class="status" id="status"></div>
+<div class="frame"><canvas id="board" aria-label="飞行棋棋盘"></canvas></div>
+<div class="diceRow"><button class="dice" id="dice" aria-label="骰子"></button><div class="diceHint" id="diceHint"></div></div>
+<div class="actions"><button class="restart" id="restart">重新开始</button><button class="restart" id="sound">声音 · 开</button></div>
+<div class="footer">掷 · 飞 · 跳 · 归</div>
+
+<script>
+// ================= 棋盘数据 =================
+// 十字形棋盘，15×15 个格位（行,列），四条臂、中间 3×3 是终点桃花。
+// 外圈 52 格：每臂 13 格，顺时针；每格依次按 桃夭→…四色轮流着色。
+// 颜色 k 的飞机：相对位置 rel  -1 机场 | 0 起飞点 | 1..49 外圈 | 50..55 终点跑道 | 56 中央终点
+const NC=['桃夭','春水','芳草','花蕊'];
+const Q=[2,3,0,1];                      // 颜色 k 的跑道在哪条臂：0 上 1 右 2 下 3 左（机场在顺时针前一个角）
+const T=Q.map(q=>(13*q+3)%52);          // 各色起飞点在外圈的编号
+const LASTR=49,GOAL=56,FLY_F=24,FLY_L=36;
+const rotp=(r,c,n)=>{for(let i=0;i<n;i++){const t=r;r=c;c=14-t}return[r,c]};
+const PAT=[[0,7],[0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[6,9],[6,10],[6,11],[6,12],[6,13],[6,14]];
+const RING=[];for(let q=0;q<4;q++)for(const[r,c]of PAT)RING.push(rotp(r,c,q));
+const RUNW=[0,1,2,3].map(q=>[1,2,3,4,5,6].map(r=>rotp(r,7,q)));
+const absOf=(k,rel)=>(T[k]+rel)%52;
+const cellColor=a=>{for(let k=0;k<4;k++)if((((a-T[k])%4)+4)%4===0)return k};
+// 桃花源配色（玉石）：桃夭、春水、芳草、花蕊
+const PC=[
+  {c:[234,150,170],ring:[208,132,151],sh:'138,84,101',tint:'#efb0bf',st:['#f7d5dd','#f0b6c4','#ea96aa','#be788b']},
+  {c:[140,190,198],ring:[128,166,175],sh:'96,102,114',tint:'#a9ced4',st:['#d1e5e8','#aed2d7','#8cbec6','#7896a0']},
+  {c:[146,184,136],ring:[133,161,122],sh:'99,99,86',tint:'#adcaa6',st:['#d3e3cf','#b3cdac','#92b888','#7c9271']},
+  {c:[234,200,116],ring:[208,174,105],sh:'138,106,77',tint:'#efd697',st:['#f7e9c7','#f0d89e','#eac874','#be9e62']}];
+const dotCss=k=>{const s=PC[k].st;return `radial-gradient(circle at 35% 35%,${s[0]},${s[1]} 50%,${s[3]})`};
+
+// ================= 画面尺寸 =================
+const U=34,M=24,W=15*U+M*2,H=W,R0=U*.4;
+const X=c=>M+(c+.5)*U,Y=r=>M+(r+.5)*U;
+const cv=document.getElementById('board');let ctx=cv.getContext('2d');
+const DPR=Math.min(2,window.devicePixelRatio||1);
+cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
+const $=x=>document.getElementById(x);
+const rand=(a,b)=>a+Math.random()*(b-a);
+const ringXY=a=>{const[r,c]=RING[a];return[X(c),Y(r)]};
+// 机场：基准是右上角（颜色的跑道在上臂），其余转过去
+const PAD0=[3.5,10.6],SLOT0=[[2.72,9.82],[2.72,11.38],[4.28,9.82],[4.28,11.38]];
+const padC=k=>{const[r,c]=rotp(PAD0[0],PAD0[1],Q[k]);return[X(c),Y(r)]};
+const slotXY=(k,i)=>{const[r,c]=rotp(SLOT0[i][0],SLOT0[i][1],Q[k]);return[X(c),Y(r)]};
+const dirOf=q=>{let dr=-1,dc=0;for(let i=0;i<q;i++){const t=dr;dr=dc;dc=-t}return[dr,dc]};
+function goalPos(k,i){const[dr,dc]=dirOf(Q[k]),rad=.34+.3*(i>>1),o=(i&1?.17:-.17),r=7+dr*rad+dc*o,c=7+dc*rad+dr*o;return[X(c),Y(r)]}
+// 飞行虚线：颜色 k 在 rel 24 → rel 36，沿外角弯出去
+const chordQ=k=>((absOf(k,FLY_F)-1)/13)|0;
+const chordCtl=k=>{const[r,c]=rotp(.3,14.9,chordQ(k));return[X(c),Y(r)]};
+const chordEnd=(k,e)=>{const[r,c]=rotp(e?7:0,e?14.5:8.5,chordQ(k));return[X(c),Y(r)]};
+function xyOf(k,rel,i){if(rel<0)return slotXY(k,i);if(rel<=LASTR)return ringXY(absOf(k,rel));if(rel<GOAL){const[r,c]=RUNW[Q[k]][rel-50];return[X(c),Y(r)]}return goalPos(k,i)}
+
+// ================= 桃花信笺：画法 =================
+const fibers=[];for(let i=0;i<900;i++)fibers.push([Math.random()*W,Math.random()*H,Math.random()*8+2,Math.random()*3,Math.random()*.06]);
+function line(x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+function blob(x,y,r,col,a){const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,col.replace('A',a));g.addColorStop(1,col.replace('A',0));ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2)}
+function petal(x,y,s,col){ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,y+s);ctx.bezierCurveTo(x-s*1.0,y+s*.25,x-s*.7,y-s*.85,x,y-s);ctx.bezierCurveTo(x+s*.7,y-s*.85,x+s*1.0,y+s*.25,x,y+s);ctx.fill()}
+function petalFlower(x,y,s){ctx.save();ctx.translate(x,y);
+  for(let k=0;k<5;k++){ctx.save();ctx.rotate(k*Math.PI*2/5);const g=ctx.createRadialGradient(0,0,s*.1,0,0,s*1.7);g.addColorStop(0,'#d9577f');g.addColorStop(.3,'#f08aa8');g.addColorStop(1,'#f9bccb');petal(0,-s*.9,s*.78,g);ctx.restore()}
+  ctx.strokeStyle='#c94d74';ctx.lineWidth=.45;ctx.fillStyle='#f5cf6a';for(let k=0;k<9;k++){const a=k*Math.PI*2/9+.2,l=s*(.42+.12*(k%2));ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(a)*l,Math.sin(a)*l);ctx.stroke();ctx.beginPath();ctx.arc(Math.cos(a)*l,Math.sin(a)*l,s*.07,0,7);ctx.fill()}
+  ctx.restore()}
+function spawnPetals(x,y,first){
+  if(first)for(let i=0;i<54;i++)parts.push({x:rand(-60,W),y:rand(-H*.6,-10),vx:rand(15,45),vy:rand(30,70),rot:rand(0,6),vr:rand(-2,2),life:rand(5,7.5),sz:rand(4,7),col:['#f6a5bb','#f18fab','#fbc4d2','#f7b3c5'][i%4]});
+  for(let i=0;i<6;i++)parts.push({x,y,vx:rand(-55,55),vy:rand(-65,-10),rot:rand(0,6),vr:rand(-3,3),life:rand(1.5,2.5),sz:rand(3,5),col:'#f18fab'})}
+const rgba=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
+// 一只小纸飞机的剪影（折纸飞机，机头朝上，细线）
+function planePath(s){ctx.beginPath();ctx.moveTo(0,-s);ctx.lineTo(s*.68,s*.7);ctx.lineTo(s*.14,s*.36);ctx.lineTo(0,s*.82);ctx.lineTo(-s*.14,s*.36);ctx.lineTo(-s*.68,s*.7);ctx.closePath()}
+function planeGlyph(x,y,s,rot,col,lw){ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.lineJoin='round';ctx.lineWidth=lw;ctx.strokeStyle=col;planePath(s);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-s);ctx.lineTo(0,s*.36);ctx.stroke();ctx.restore()}
+
+// ---------- 棋盘底图：画一次存起来，每帧直接贴 ----------
+const bg=document.createElement('canvas');bg.width=W*DPR;bg.height=H*DPR;
+function rrect(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r)}
+function buildBg(){const g0=ctx;ctx=bg.getContext('2d');ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle='#fffaf8';ctx.fillRect(0,0,W,H);
+  ctx.lineWidth=.6;for(const[x,y,l,a,o]of fibers){ctx.strokeStyle=`rgba(200,140,150,${o})`;line(x,y,x+Math.cos(a)*l,y+Math.sin(a)*l)}
+  ctx.strokeStyle='rgba(170,100,120,.5)';ctx.lineWidth=1.4;ctx.strokeRect(8,8,W-16,H-16);ctx.lineWidth=.6;ctx.strokeRect(12,12,W-24,H-24);
+  // 机场（淡色圆角区域）：四个角各一块，里面有四个停机位
+  for(let k=0;k<4;k++){const[px,py]=padC(k),s=U*3.3,c=PC[k].c,rg=PC[k].ring;
+    ctx.fillStyle=rgba(c,.2);rrect(px-s/2,py-s/2,s,s,18);ctx.fill();
+    ctx.strokeStyle=rgba(rg,.6);ctx.lineWidth=1.1;ctx.stroke();ctx.lineWidth=.6;ctx.strokeStyle=rgba(rg,.3);rrect(px-s/2+4,py-s/2+4,s-8,s-8,14);ctx.stroke();
+    ctx.globalAlpha=.34;petalFlower(px,py,U*.34);ctx.globalAlpha=1;
+    for(let i=0;i<4;i++){const[x,y]=slotXY(k,i);ctx.beginPath();ctx.arc(x,y,R0+3.5,0,7);ctx.fillStyle='rgba(255,250,248,.8)';ctx.fill();ctx.strokeStyle=rgba(rg,.55);ctx.lineWidth=.9;ctx.setLineDash([2.5,2.5]);ctx.stroke();ctx.setLineDash([])}
+    // 机场门口通向起飞点的小路
+    const[tr,tc]=rotp(2,8,Q[k]),[er,ec]=rotp(2,8.95,Q[k]);ctx.strokeStyle=rgba(rg,.85);ctx.lineWidth=1.3;ctx.setLineDash([2,3]);line(X(tc),Y(tr),X(ec),Y(er));ctx.setLineDash([])}
+  // 飞行虚线：粉色细虚线，两端各一只小纸飞机
+  for(let k=0;k<4;k++){const f=chordEnd(k,0),l=chordEnd(k,1),cp=chordCtl(k);
+    const at=t=>{const u=1-t;return[u*u*f[0]+2*u*t*cp[0]+t*t*l[0],u*u*f[1]+2*u*t*cp[1]+t*t*l[1]]};
+    ctx.strokeStyle='rgba(214,110,138,.8)';ctx.lineWidth=1.3;ctx.setLineDash([5,4.5]);ctx.beginPath();
+    for(let j=0;j<=44;j++){const q=at(.97*j/44);j?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])}ctx.stroke();ctx.setLineDash([]);
+    const e1=at(.985),e0=at(.93),ang=Math.atan2(e1[1]-e0[1],e1[0]-e0[0]);ctx.save();ctx.translate(e1[0],e1[1]);ctx.rotate(ang);ctx.fillStyle='rgba(214,110,138,.9)';ctx.beginPath();ctx.moveTo(4.5,0);ctx.lineTo(-3,-3.2);ctx.lineTo(-3,3.2);ctx.closePath();ctx.fill();ctx.restore()}
+  // 中央终点：四个颜色的三角 + 一朵大桃花
+  const cx=X(7),cy=Y(7),hs=U*1.5;
+  ctx.fillStyle='#fff6f5';rrect(cx-hs,cy-hs,hs*2,hs*2,10);ctx.fill();
+  for(let k=0;k<4;k++){const[dr,dc]=dirOf(Q[k]),pr=dc,pc=dr;ctx.fillStyle=rgba(PC[k].c,.42);ctx.beginPath();ctx.moveTo(cx,cy);
+    ctx.lineTo(cx+dc*hs+pc*hs,cy+dr*hs+pr*hs);ctx.lineTo(cx+dc*hs-pc*hs,cy+dr*hs-pr*hs);ctx.closePath();ctx.fill()}
+  ctx.strokeStyle='rgba(190,110,135,.55)';ctx.lineWidth=1.1;rrect(cx-hs,cy-hs,hs*2,hs*2,10);ctx.stroke();
+  ctx.strokeStyle='rgba(255,250,248,.85)';ctx.lineWidth=1.2;line(cx-hs,cy-hs,cx+hs,cy+hs);line(cx+hs,cy-hs,cx-hs,cy+hs);
+  petalFlower(cx,cy,U*.5);
+  // 外圈 52 格，按四色轮流着色
+  for(let a=0;a<52;a++){const k=cellColor(a),[x,y]=ringXY(a),s=U*.84,pc=PC[k];
+    ctx.fillStyle='#fffaf8';rrect(x-s/2,y-s/2,s,s,8);ctx.fill();
+    ctx.fillStyle=rgba(pc.c,.36);ctx.fill();ctx.strokeStyle=rgba(pc.ring,.65);ctx.lineWidth=.9;ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=.7;rrect(x-s/2+2.5,y-s/2+2.5,s-5,s-5,6);ctx.stroke()}
+  // 起飞点：加深加粗，印一只小飞机
+  for(let k=0;k<4;k++){const[x,y]=ringXY(T[k]),s=U*.84,pc=PC[k];ctx.fillStyle=rgba(pc.c,.62);rrect(x-s/2,y-s/2,s,s,8);ctx.fill();ctx.strokeStyle=rgba(pc.ring,1);ctx.lineWidth=1.6;ctx.stroke();
+    const[tr,tc]=rotp(2,8,Q[k]),[er,ec]=rotp(2,8.95,Q[k]);planeGlyph(x,y,s*.3,Math.atan2(Y(er)-Y(tr),X(ec)-X(tc))+Math.PI/2,'rgba(255,255,255,.95)',1.4)}
+  // 飞行格：虚线两端的同色格，各有一只粉色小纸飞机
+  for(let k=0;k<4;k++){const f=absOf(k,FLY_F),l=absOf(k,FLY_L);
+    for(const[a,isF]of[[f,1],[l,0]]){const[x,y]=ringXY(a),pc=PC[k],s=U*.84;ctx.fillStyle=rgba(pc.c,.5);rrect(x-s/2,y-s/2,s,s,8);ctx.fill();ctx.strokeStyle=rgba(pc.ring,.95);ctx.lineWidth=1.2;ctx.stroke();
+      const cp=chordCtl(k),to=isF?cp:ringXY(f),from=[x,y];const ang=Math.atan2(to[1]-from[1],to[0]-from[0])+Math.PI/2;
+      planeGlyph(x,y,s*.28,isF?ang:ang+Math.PI,'#d0557a',1.3)}}
+  // 终点跑道：每色 6 格，往中央去
+  for(let k=0;k<4;k++){const pc=PC[k],q=Q[k],[dr,dc]=dirOf(q);
+    for(let j=0;j<6;j++){const[r,c]=RUNW[q][j],x=X(c),y=Y(r),s=U*.78;ctx.fillStyle='#fffaf8';rrect(x-s/2,y-s/2,s,s,7);ctx.fill();ctx.fillStyle=rgba(pc.c,.55);ctx.fill();ctx.strokeStyle=rgba(pc.ring,.95);ctx.lineWidth=1;ctx.stroke();
+      ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=1.3;
+      // 一枚小箭头，指向中央
+      const ax=dc*5,ay=dr*5,nx=-dr*4,ny=dc*4;ctx.beginPath();ctx.moveTo(x-ax*.6+nx,y-ay*.6+ny);ctx.lineTo(x+ax*.8,y+ay*.8);ctx.lineTo(x-ax*.6-nx,y-ay*.6-ny);ctx.stroke()}}
+  ctx=g0}
+
+// ---------- 玉珠飞机（玉石画法同跳棋，上面浅浅刻一只小纸飞机） ----------
+function drawShadow(x,y,k,s,lift=0){const R=R0*s,t=PC[k].sh,off=1+lift*1.6,sp=1+lift*.35,a=1-lift*.55;
+  const sx=x+R*.18*off,sy=y+R*.26*off,sg=ctx.createRadialGradient(sx,sy,R*.3,sx,sy,R*1.25*sp);
+  sg.addColorStop(0,`rgba(${t},${.30*a})`);sg.addColorStop(.6,`rgba(${t},${.12*a})`);sg.addColorStop(1,`rgba(${t},0)`);ctx.fillStyle=sg;ctx.beginPath();ctx.ellipse(sx,sy,R*1.25*sp,R*1.1*sp,0,0,7);ctx.fill();
+  if(lift>.6)return;const cx=x+R*.05,cy=y+R*.12,cg=ctx.createRadialGradient(cx,cy,R*.75,cx,cy,R*1.04);cg.addColorStop(0,`rgba(${t},${.35*(1-lift/.6)})`);cg.addColorStop(1,`rgba(${t},0)`);ctx.fillStyle=cg;ctx.beginPath();ctx.arc(cx,cy,R*1.04,0,7);ctx.fill()}
+const _W=[255,255,255],_K=[60,30,45],_mx=(a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*t)),_rgb=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
+function jblob(x,y,r,c,a){const b=ctx.createRadialGradient(x,y,0,x,y,r);b.addColorStop(0,_rgb(c,a));b.addColorStop(1,_rgb(c,0));ctx.fillStyle=b;ctx.fillRect(x-r,y-r,r*2,r*2)}
+function drawStone(x,y,k,s){const R=R0*s,c=PC[k].c;let sd=k*977+3;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
+  ctx.save();ctx.beginPath();ctx.arc(x,y,R,0,7);ctx.clip();
+  const b=ctx.createRadialGradient(x-R*.2,y-R*.25,R*.1,x,y,R*1.05);
+  b.addColorStop(0,_rgb(_mx(c,_W,.45),1));b.addColorStop(.6,_rgb(c,1));b.addColorStop(1,_rgb(_mx(c,_K,.25),1));
+  ctx.fillStyle=b;ctx.fillRect(x-R,y-R,R*2,R*2);
+  for(let i=0;i<5;i++){const a=rnd()*6.28,d=rnd()*R*.6;jblob(x+Math.cos(a)*d,y+Math.sin(a)*d,R*(.18+rnd()*.3),_mx(c,_W,.85),.38)}
+  ctx.strokeStyle=_rgb(_mx(c,_W,.8),.28);ctx.lineWidth=R*.05;ctx.beginPath();const a0=rnd()*6.28;ctx.moveTo(x+Math.cos(a0)*R*.7,y+Math.sin(a0)*R*.7);
+  ctx.bezierCurveTo(x+(rnd()-.5)*R,y+(rnd()-.5)*R,x+(rnd()-.5)*R,y+(rnd()-.5)*R,x+Math.cos(a0+2.4)*R*.7,y+Math.sin(a0+2.4)*R*.7);ctx.stroke();
+  jblob(x+R*.25,y+R*.5,R*.6,_mx(c,_W,.7),.45);
+  // 浅浅刻上去的小纸飞机：一道白色高光描边 + 一道比玉色深一点的细线
+  const gs=R*.6,gx=x,gy=y+R*.04,rot=.5;
+  planeGlyph(gx+.7,gy+.8,gs,rot,'rgba(255,255,255,.75)',Math.max(.8,R*.085));
+  planeGlyph(gx,gy,gs,rot,_rgb(_mx(c,_K,.45),.72),Math.max(.7,R*.07));
+  const rim=ctx.createRadialGradient(x,y,R*.8,x,y,R);rim.addColorStop(0,_rgb(_W,0));rim.addColorStop(1,_rgb(_W,.18));ctx.fillStyle=rim;ctx.fillRect(x-R,y-R,R*2,R*2);
+  jblob(x-R*.3,y-R*.35,R*.65,_W,.42);
+  ctx.fillStyle='rgba(255,255,255,.6)';ctx.beginPath();ctx.ellipse(x-R*.33,y-R*.43,R*.2,R*.11,-.6,0,7);ctx.fill();
+  ctx.restore()}
+
+// ================= 对局状态 =================
+let gid=0,pos=[],act=[],seat=['me','cpu','cpu','cpu'],cur=0,phase='idle',dice=1,sixes=0,over=false,winner=-1;
+let anim=null,ghosts=[],appear={},parts=[],winT=0,pend=[],forced=[],thinkAI=false,movable=[],nCount=4;
+const isHuman=k=>seat[k]!=='cpu';
+const actColors=n=>n===2?[0,2]:n===3?[0,1,2]:[0,1,2,3];
+
+// ================= 规则：一步棋会怎么走 =================
+// 返回这一步经过的每一格：kind  hop 走一格 | takeoff 起飞 | slide 跳子滑行 | fly 飞棋；stop 表示在这里停下（会撞人）
+function planMove(k,p,d){
+  if(p<0)return[{to:0,kind:'takeoff',stop:true}];
+  const seq=[];let cur=p,dir=1;
+  for(let n=0;n<d;n++){if(dir===1&&cur===GOAL)dir=-1;cur+=dir;seq.push({to:cur,kind:'hop'})}
+  seq[seq.length-1].stop=true;
+  if(cur>0&&cur<=LASTR&&cur%4===0){
+    if(cur===FLY_F)seq.push({to:FLY_L,kind:'fly',stop:true});
+    else if(cur+4<=LASTR){for(let j=1;j<=4;j++)seq.push({to:cur+j,kind:'slide',stop:j===4});
+      if(cur+4===FLY_F)seq.push({to:FLY_L,kind:'fly',stop:true})}}
+  return seq}
+const finalOf=(k,p,d)=>{const s=planMove(k,p,d);return s[s.length-1].to};
+// 某个停靠点上，有哪些别人的飞机会被撞回机场
+function victimsAt(k,rel){const out=[];if(rel<0||rel>LASTR)return out;const a=absOf(k,rel);
+  for(const e of act)if(e!==k)for(let i=0;i<4;i++){const q=pos[e][i];if(q>=0&&q<=LASTR&&absOf(e,q)===a)out.push([e,i])}return out}
+function legalMoves(k,d){const out=[];for(let i=0;i<4;i++){const p=pos[k][i];if(p===GOAL)continue;if(p<0&&d!==6)continue;out.push({i,p})}return out}
+const uniqueMoves=ms=>{const seen=new Set(),o=[];for(const m of ms)if(!seen.has(m.p)){seen.add(m.p);o.push(m)}return o};
+
+// ================= 绘制循环（有动画时才跑） =================
+const FADE=380;
+let raf=null,lastT=0;
+function needAnim(t){return parts.length>0||!!anim||ghosts.length>0||phase==='pick'||Object.keys(appear).length>0||(winT&&t-winT<4200)}
+function segPos(sg,k){const e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+  if(sg.c){const u=1-e;return[u*u*sg.a[0]+2*u*e*sg.c[0]+e*e*sg.b[0],u*u*sg.a[1]+2*u*e*sg.c[1]+e*e*sg.b[1]]}
+  return[sg.a[0]+(sg.b[0]-sg.a[0])*e,sg.a[1]+(sg.b[1]-sg.a[1])*e]}
+function frame(t){
+  const dt=lastT?Math.min(.05,(t-lastT)/1000):0;lastT=t;
+  ctx.clearRect(0,0,W,H);ctx.drawImage(bg,0,0,W,H);
+  // 把同一格里的飞机错开摆
+  const groups={};
+  for(const k of act)for(let i=0;i<4;i++){if(anim&&anim.k===k&&anim.i===i)continue;const p=pos[k][i];
+    const key=p<0||p===GOAL?`s${k}:${i}`:p<=LASTR?`r${absOf(k,p)}`:`u${k}:${p}`;(groups[key]||(groups[key]=[])).push([k,i,p])}
+  const items=[];
+  for(const key in groups){const L=groups[key],n=L.length;
+    L.forEach(([k,i,p],j)=>{let[x,y]=xyOf(k,p,i),s=p<0?.9:p===GOAL?.46:1;
+      if(p>=0&&p<GOAL&&n>1){const o=n===2?[[-.2,-.04],[.2,.04]][j]:n===3?[[0,-.22],[-.22,.16],[.22,.16]][j]:[[-.2,-.2],[.2,-.2],[-.2,.2],[.2,.2]][j%4];x+=o[0]*U;y+=o[1]*U;s=n===2?.78:n===3?.68:.6}
+      let al=1;const ap=appear[k+':'+i];if(ap){al=Math.min(1,(t-ap)/FADE);if(al>=1)delete appear[k+':'+i]}
+      items.push([x,y,k,s,0,al,k,i])})}
+  items.sort((a,b)=>a[1]-b[1]);
+  for(const[x,y,k,s,l,al]of items){ctx.globalAlpha=al;drawShadow(x,y,k,s,l)}ctx.globalAlpha=1;
+  for(const[x,y,k,s,l,al,kk,i]of items){ctx.globalAlpha=al;drawStone(x,y,k,s);ctx.globalAlpha=1}
+  // 被撞走的飞机：在原地慢慢淡出
+  ghosts=ghosts.filter(g=>t-g.t0<FADE);
+  for(const g of ghosts){const a=1-(t-g.t0)/FADE;ctx.globalAlpha=a;drawShadow(g.x,g.y,g.k,1+(1-a)*.15,1-a);drawStone(g.x,g.y-(1-a)*8,g.k,1+(1-a)*.15);ctx.globalAlpha=1}
+  // 能走的飞机：脉动光圈 + 落点小桃花
+  if(phase==='pick'){const pl=.5+.5*Math.sin(t/230);
+    for(const m of movable){const[x,y]=curXY(m);ctx.strokeStyle=`rgba(214,110,138,${.55+.4*pl})`;ctx.lineWidth=1.8;ctx.setLineDash([3.5,3]);ctx.beginPath();ctx.arc(x,y,R0*(m.s||1)+4+pl*1.4,0,7);ctx.stroke();ctx.setLineDash([])}
+    const done=new Set();for(const m of movable){const f=finalOf(cur,m.p,dice),key=m.p+':'+f;if(done.has(key))continue;done.add(key);const[x,y]=xyOf(cur,f,m.i);ctx.globalAlpha=.9;petalFlower(x,y,U*.17);ctx.globalAlpha=1}}
+  // 正在飞的那一架
+  if(anim){const sg=anim.segs[anim.si],k=Math.max(0,Math.min(1,(t-anim.t0)/sg.dur)),[x,y]=segPos(sg,k),lift=Math.pow(Math.sin(Math.PI*k),.8)*sg.arc;
+    const sc=1+lift*(sg.kind==='fly'?.5:.16);drawShadow(x,y,anim.k,sc,Math.min(1,lift*.9));drawStone(x,y-lift*U*(sg.kind==='fly'?.5:.55),anim.k,sc)}
+  for(const p of parts){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.rot+=p.vr*dt;p.vx+=Math.sin(t/500+p.y*.02)*.8;
+    ctx.globalAlpha=Math.max(0,Math.min(1,p.life));ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);petal(0,0,p.sz,p.col);ctx.restore();ctx.globalAlpha=1}
+  parts=parts.filter(p=>p.life>0);
+  raf=needAnim(t)?requestAnimationFrame(frame):null;if(!raf)lastT=0}
+function kick(){if(!raf)raf=requestAnimationFrame(frame)}
+// 一架飞机当下摆在画面上的位置（含同格错开）
+function curXY(m){const k=cur,p=pos[k][m.i];if(p<0||p===GOAL||p>LASTR)return xyOf(k,p,m.i);
+  const a=absOf(k,p);const L=[];for(const e of act)for(let i=0;i<4;i++){const q=pos[e][i];if(q>=0&&q<=LASTR&&absOf(e,q)===a)L.push([e,i])}
+  const n=L.length,j=Math.max(0,L.findIndex(z=>z[0]===k&&z[1]===m.i));let[x,y]=xyOf(k,p,m.i);
+  if(n>1){const o=n===2?[[-.2,-.04],[.2,.04]][j]:n===3?[[0,-.22],[-.22,.16],[.22,.16]][j]:[[-.2,-.2],[.2,-.2],[-.2,.2],[.2,.2]][j%4];x+=o[0]*U;y+=o[1]*U;m.s=n===2?.78:n===3?.68:.6}else m.s=1;return[x,y]}
+
+// ================= 骰子 =================
+const PIPS={1:[4],2:[2,6],3:[2,4,6],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+const diceEl=$('dice');diceEl.innerHTML='<canvas width="128" height="128"></canvas>';const dctx=diceEl.firstChild.getContext('2d');
+// 白玉方片 + 嵌在上面的小珍珠：一点和四点是粉珍珠，其他是墨莓珍珠
+function dPearl(x,y,R,pink){const c=dctx;c.save();c.shadowColor='rgba(80,30,50,.3)';c.shadowBlur=3;c.shadowOffsetY=1.5;c.fillStyle='#000';c.beginPath();c.arc(x,y,R,0,7);c.fill();c.restore();
+  c.save();c.beginPath();c.arc(x,y,R,0,7);c.clip();const b=c.createRadialGradient(x-R*.35,y-R*.4,R*.1,x,y,R*1.05);
+  if(pink){b.addColorStop(0,'#fff3f6');b.addColorStop(.5,'#f4b6c6');b.addColorStop(1,'#d77d97')}else{b.addColorStop(0,'#6d4a63');b.addColorStop(.45,'#3e2235');b.addColorStop(1,'#1c0c17')}
+  c.fillStyle=b;c.fillRect(x-R,y-R,R*2,R*2);const hl=(hx,hy,r,a)=>{const g=c.createRadialGradient(hx,hy,0,hx,hy,r);g.addColorStop(0,`rgba(255,255,255,${a})`);g.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=g;c.fillRect(hx-r,hy-r,r*2,r*2)};
+  hl(x-R*.32,y-R*.38,R*.55,pink?.75:.35);hl(x-R*.36,y-R*.42,R*.15,pink?1:.85);c.restore()}
+const DP={1:[[0,0]],2:[[-1,-1],[1,1]],3:[[-1,-1],[0,0],[1,1]],4:[[-1,-1],[1,-1],[-1,1],[1,1]],5:[[-1,-1],[1,-1],[0,0],[-1,1],[1,1]],6:[[-1,-1],[1,-1],[-1,0],[1,0],[-1,1],[1,1]]};
+function setFace(v){dice=v;const c=dctx,S=104,x=64,y=60;c.clearRect(0,0,128,128);
+  c.save();c.shadowColor='rgba(140,70,90,.2)';c.shadowBlur=12;c.shadowOffsetY=5;c.fillStyle='#f7f1ed';c.beginPath();c.roundRect(x-S/2,y-S/2,S,S,S*.22);c.fill();c.restore();
+  c.save();c.beginPath();c.roundRect(x-S/2,y-S/2,S,S,S*.22);c.clip();const g=c.createRadialGradient(x-S*.2,y-S*.25,4,x,y,S*.8);g.addColorStop(0,'#fffefc');g.addColorStop(1,'#efe6e1');c.fillStyle=g;c.fillRect(x-S/2,y-S/2,S,S);c.restore();
+  const G=S*.27;for(const[a,b]of DP[v])dPearl(x+a*G,y+b*G,v===1?18:10,v===1||v===4)}
+function diceColor(){const r=PC[cur].ring.join(',');document.documentElement.style.setProperty('--dc',`rgb(${r})`);document.documentElement.style.setProperty('--dca',`rgba(${r},.55)`)}
+
+// ================= 声音（真实录音，见 sounds/CREDITS.md） =================
+let soundOn=true;try{soundOn=localStorage.getItem('gomoku-sound')!=='off'}catch(e){}
+const POOL={},unlocked={v:false};
+function apool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
+function sfx(f,vol,rate){if(!soundOn)return;const ps=apool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
+// iPhone 要求声音第一次由手指触发：第一次点击时把所有声音静音播一下，之后电脑走子也能出声
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather'].forEach(f=>apool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
+function clack(k,vol=.6){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),vol,.96+k*.03+(Math.random()-.5)*.05)}
+function syncSound(){$('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}
+
+// ================= 对局流程 =================
+const later=(ms,fn)=>{const g=gid;setTimeout(()=>{if(g===gid)fn()},ms)};
+const nextColor=()=>act[(act.indexOf(cur)+1)%act.length];
+function who(k){if(!isHuman(k))return NC[k]+'（电脑）';const hs=act.filter(isHuman);return seat[k]==='me'&&hs.length===1&&act.filter(x=>seat[x]==='me').length===1?'你（'+NC[k]+'）':(seat[k]==='me'?'我':'朋友')+'（'+NC[k]+'）'}
+const dotH=k=>`<span class="dot" style="background:${dotCss(k)}"></span>`;
+function setStatus(txt){const el=$('status');el.classList.toggle('win',over&&winner>=0);
+  if(!over){el.innerHTML=dotH(cur)+' '+(txt||'')+(thinkAI?'<span class="thinking"><i></i><i></i><i></i></span>':'')}
+  else el.innerHTML=dotH(winner)+' '+(txt||'')}
+function setHint(t){$('diceHint').textContent=t||''}
+function readSeats(){const sel=[...document.querySelectorAll('#seats select')];sel.forEach((s,k)=>seat[k]=s.value)}
+function buildSeats(){const box=$('seats'),old=[...box.querySelectorAll('select')].map(s=>s.value);box.innerHTML='';
+  actColors(nCount).forEach(k=>{const l=document.createElement('label');l.className='seat';
+    l.innerHTML=`${dotH(k)}<span>${NC[k]}</span><select data-k="${k}"><option value="me">我</option><option value="friend">朋友</option><option value="cpu">电脑</option></select>`;
+    const s=l.querySelector('select');s.value=seat[k];s.onchange=reset;box.appendChild(l)})}
+function reset(){
+  if(pos.length&&pos.some(a=>a.some(p=>p!==-1)))sfx('pearlGather',.8,1);
+  gid++;document.querySelectorAll('#seats select').forEach(s=>seat[+s.dataset.k]=s.value);
+  act=actColors(nCount);pos=[0,1,2,3].map(()=>[-1,-1,-1,-1]);cur=act[0];sixes=0;over=false;winner=-1;anim=null;ghosts=[];appear={};parts=[];winT=0;pend=[];movable=[];thinkAI=false;
+  $('dice').classList.remove('roll');setFace(1);diceColor();kick();startTurn()}
+function startTurn(extra){
+  if(over)return;diceColor();phase='roll';movable=[];
+  const h=isHuman(cur);thinkAI=!h;
+  $('dice').classList.toggle('ready',h);
+  setStatus(h?(extra?'掷到 6，再掷一次':'轮到'+who(cur)+' · 点骰子掷'):NC[cur]+'在掷骰子');
+  setHint(h?(extra?'再来一次':'点骰子'):'');
+  kick();
+  if(!h)later(rand(450,650),doRoll)}
+function doRoll(){
+  if(phase!=='roll'||over)return;phase='rolling';thinkAI=false;$('dice').classList.remove('ready');
+  const d=forced.length?forced.shift():1+Math.floor(Math.random()*6);
+  const el=$('dice');el.classList.remove('roll');void el.offsetWidth;el.classList.add('roll');sfx('pearlPick',.45,1.12);
+  const g=gid;let n=0;const iv=setInterval(()=>{if(g!==gid){clearInterval(iv);return}setFace(1+Math.floor(Math.random()*6));if(++n>=7)clearInterval(iv)},80);
+  later(620,()=>{setFace(d);clack(0,.7);afterRoll(d)})}
+function afterRoll(d){
+  if(d===6){sixes++;if(sixes>=3){setStatus('连掷三个 6，这一回合作废');setHint('第三个 6 不算');sixes=0;phase='wait';later(1200,nextTurn);return}}
+  const ms=legalMoves(cur,d),um=uniqueMoves(ms);
+  if(!um.length){setStatus('掷到 '+d+'，没有能走的飞机');setHint('');phase='wait';later(1000,()=>{if(d===6)startTurn(true);else nextTurn()});return}
+  const h=isHuman(cur);
+  if(um.length===1){phase='wait';setStatus('掷到 '+d);later(h?420:rand(400,600),()=>startMove(cur,um[0].i,d));return}
+  if(h){phase='pick';movable=ms.map(m=>({i:m.i,p:m.p,s:1}));setStatus(who(cur)+' · 掷到 '+d+'，点一架亮着的飞机');setHint('选一架飞机');kick()}
+  else{phase='wait';thinkAI=true;setStatus('掷到 '+d);later(rand(450,600),()=>{thinkAI=false;const m=aiPick(cur,d,um);startMove(cur,m.i,d)})}}
+function nextTurn(){sixes=0;cur=nextColor();startTurn()}
+// 一步棋：按 planMove 一格一格飞过去
+function startMove(k,i,d){
+  phase='move';movable=[];setHint('');thinkAI=false;$('dice').classList.remove('ready');
+  const p0=pos[k][i],plan=planMove(k,p0,d),segs=[];let prev=p0;
+  for(const st of plan){const a=xyOf(k,prev,i),b=xyOf(k,st.to,i);
+    const sg={a,b,kind:st.kind,st,dur:st.kind==='fly'?640:st.kind==='slide'?95:st.kind==='takeoff'?400:190,arc:st.kind==='fly'?.95:st.kind==='slide'?.12:st.kind==='takeoff'?.9:.5};
+    if(st.kind==='fly')sg.c=chordCtl(k);segs.push(sg);prev=st.to}
+  setStatus(NC[k]+(p0<0?'起飞！':''));
+  anim={k,i,segs,si:0,t0:performance.now()};kick();
+  const g=gid;const play=()=>{if(g!==gid||!anim)return;const sg=segs[anim.si];anim.t0=performance.now();
+    if(sg.kind==='fly')sfx('pearlPick',.5,1.15);else if(sg.kind==='takeoff')sfx('pearlPick',.5,1);
+    setTimeout(()=>{if(g!==gid)return;const st=sg.st;pos[k][i]=st.to;
+      if(sg.kind==='hop'||sg.kind==='takeoff'||sg.kind==='fly'||st.stop)clack(k,sg.kind==='hop'?.4:.6);
+      if(st.stop)for(const[e,j]of victimsAt(k,st.to)){const[gx,gy]=xyOf(e,pos[e][j],j);ghosts.push({x:gx,y:gy,k:e,t0:performance.now()});pos[e][j]=-1;appear[e+':'+j]=performance.now()+FADE*.6;setTimeout(()=>sfx('pearlPick',.55,.9),60)}
+      if(!anim)return;if(anim.si<segs.length-1){anim.si++;play()}else{anim=null;kick();setTimeout(()=>{if(g===gid)afterMove(k,d)},260)}},sg.dur)};
+  // 先把飞机算在原地（动画期间不画静态那一份）
+  play()}
+function afterMove(k,d){if(over)return;
+  if(pos[k].every(p=>p===GOAL)){over=true;winner=k;phase='over';winT=performance.now();
+    setStatus(isHuman(k)?(seat.some(s=>s==='me')&&seat[k]==='me'&&act.filter(x=>seat[x]==='me').length===1?'你赢啦！四架飞机都到家了':who(k)+'赢啦！四架都到家了'):NC[k]+'（电脑）先到家，再来一局吧');
+    setHint('');$('dice').classList.remove('ready');
+    [0,1,2,3,4].forEach(n=>later(n*160,()=>{if(over){spawnPetals(rand(W*.3,W*.7),rand(H*.3,H*.6),n===0);kick()}}));return}
+  if(d===6)startTurn(true);else nextTurn()}
+
+// ================= 电脑：简单启发式 =================
+function dangerAt(k,a){let n=0;for(const e of act){if(e===k)continue;for(let i=0;i<4;i++){const q=pos[e][i];
+    if(q<0){if(a===T[e])n+=.35;continue}if(q>LASTR)continue;const s=((a-absOf(e,q))%52+52)%52;if(s>=1&&s<=6&&q+s<=LASTR)n+=1}}return n}
+function aiPick(k,d,um){let best=null;
+  const out=pos[k].filter(p=>p>=0&&p<GOAL).length;
+  for(const m of um){const p=m.p,plan=planMove(k,p,d),fin=plan[plan.length-1].to;let s=rand(-2,2);
+    for(const st of plan)if(st.stop)for(const[e,j]of victimsAt(k,st.to))s+=55+pos[e][j]*1.1;      // 能撞人
+    if(p<0){s+=out===0?90:42-out*6;s-=dangerAt(k,T[k])*16}                                     // 能起飞
+    if(fin===GOAL)s+=90;else if(fin>LASTR)s+=26;                                              // 到终点 / 进跑道（安全）
+    if(plan.some(x=>x.kind==='slide'))s+=16;if(plan.some(x=>x.kind==='fly'))s+=26;            // 跳子、飞棋
+    if(p>=0){s+=(fin-p)*.4+fin*.12;if(p>=44)s+=5;
+      const db=p<=LASTR?dangerAt(k,absOf(k,p)):0,da=fin<=LASTR?dangerAt(k,absOf(k,fin)):0;s+=(db-da)*22}
+    else if(fin<=LASTR){}
+    if(!best||s>best.s)best={...m,s}}
+  return best}
+
+// ================= 点棋盘 / 点骰子 =================
+function toXY(e){const rc=cv.getBoundingClientRect();return[(e.clientX-rc.left)*(W/rc.width),(e.clientY-rc.top)*(H/rc.height)]}
+cv.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;if(phase!=='pick'||!isHuman(cur))return;
+  const[mx,my]=toXY(e);let best=null,bd=1e9;for(const m of movable){const[x,y]=curXY(m),d=Math.hypot(x-mx,y-my);if(d<bd){bd=d;best=m}}
+  if(best&&bd<U*1.15)startMove(cur,best.i,dice)});
+cv.addEventListener('mousemove',e=>{if(phase!=='pick'){cv.style.cursor='default';return}const[mx,my]=toXY(e);cv.style.cursor=movable.some(m=>{const[x,y]=curXY(m);return Math.hypot(x-mx,y-my)<U*1.15})?'pointer':'default'});
+$('dice').addEventListener('click',()=>{if(phase==='roll'&&isHuman(cur))doRoll()});
+
+// ================= 控件 =================
+$('cntSeg').onclick=e=>{const b=e.target.closest('button');if(!b||+b.dataset.n===nCount)return;nCount=+b.dataset.n;
+  document.querySelectorAll('#cntSeg button').forEach(x=>x.classList.toggle('on',x===b));buildSeats();reset()};
+$('restart').onclick=reset;
+$('sound').onclick=()=>{soundOn=!soundOn;try{localStorage.setItem('gomoku-sound',soundOn?'on':'off')}catch(e){}syncSound();if(soundOn)clack(0)};
+// 给自动检查用的小窗口
+window.__f={planMove,legalMoves,victimsAt,aiPick,
+  set(p,c,sx){pos=p.map(a=>a.slice());if(c!==undefined)cur=c;if(sx!==undefined)sixes=sx;kick()},
+  force(arr){forced=arr.slice()},setSeats(a){seat=a.slice();document.querySelectorAll('#seats select').forEach(s=>s.value=seat[+s.dataset.k])},
+  info:{T,RING,RUNW,absOf,cellColor,Q,PAT},
+  get pos(){return pos},get cur(){return cur},get phase(){return phase},get dice(){return dice},get over(){return over},get winner(){return winner},get sixes(){return sixes},get movable(){return movable.map(m=>({...m}))},
+  xy(k,i){return curXY({i})}, canvasXY(k,i){const[x,y]=curXY({i}),rc=cv.getBoundingClientRect();return[rc.left+x*rc.width/W,rc.top+y*rc.height/H]},
+  startMove,afterRoll,nextTurn,doRoll,startTurn};
+buildBg();buildSeats();syncSound();reset();
+</script>
+<script>
+(function(){const m=document.getElementById('rulesMask'),open=()=>m.classList.add('on'),close=()=>m.classList.remove('on');
+  document.getElementById('helpBtn').addEventListener('click',open);m.addEventListener('click',e=>{if(e.target===m||e.target.classList.contains('close'))close()});
+  addEventListener('keydown',e=>{if(e.key==='Escape')close()})})();
+</script>
+</body>
+</html>

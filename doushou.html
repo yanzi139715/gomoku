@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>斗兽棋 · 桃源弈</title>
+<meta name="description" content="一盘桃花信笺风格的斗兽棋，可以和电脑下，也可以两人同下。">
+<meta name="theme-color" content="#fbf1f0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='26' fill='%236e2240'/%3E%3Cellipse cx='24' cy='22' rx='8' ry='5' fill='%23ffdcea' opacity='.5' transform='rotate(-30 24 22)'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#fbf1f0;--ink:#8a4a5c;--soft:#b98593;--line:#e6c3ca;--btn:#8a4a5c;--btnInk:#fbf1f0}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:36px 16px 40px;overflow-x:hidden;
+  background:var(--bg);color:var(--ink);font-family:'Noto Serif SC','Songti SC',serif;
+  background-image:radial-gradient(ellipse at 15% 10%,rgba(240,190,200,.35),transparent 50%),radial-gradient(ellipse at 90% 90%,rgba(220,200,230,.35),transparent 50%);
+  animation:fadein .9s ease both}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.title{font-size:36px;font-weight:300;letter-spacing:16px;text-indent:16px;user-select:none;line-height:1.2;text-align:center}
+.sub{font-size:13px;letter-spacing:3px;color:var(--soft);margin:10px 0 22px;text-align:center}
+.controls{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:16px}
+.seg{display:flex}
+.seg button{font-family:inherit;font-size:13px;letter-spacing:2px;padding:7px 18px;border:1.5px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);cursor:pointer;transition:background .2s,color .2s;border-radius:0}
+.seg button+button{border-left:none}
+.seg button.on{background:var(--btn);color:var(--btnInk);border-color:var(--btn)}
+.subrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+select{font-family:inherit;font-size:13px;letter-spacing:1px;color:var(--ink);background:rgba(255,255,255,.7);border:1.5px solid var(--line);padding:6px 30px 6px 12px;cursor:pointer;appearance:none;-webkit-appearance:none;border-radius:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23b98593'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+select:focus{outline:none;border-color:var(--ink)}
+.status{height:28px;font-size:15px;letter-spacing:2px;color:var(--soft);margin-bottom:12px;display:flex;align-items:center;gap:8px;user-select:none;text-align:center}
+.status.win{color:var(--ink);font-size:17px}
+.dot{width:16px;height:16px;border-radius:50%;display:inline-block;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+.dot.p1{background:radial-gradient(circle at 35% 35%,#6d4a63,#3e2235 45%,#1c0c17)}
+.dot.p2{background:radial-gradient(circle at 35% 35%,#fffdfb,#f6eeee 50%,#d3c4cf)}
+.thinking{display:inline-flex;gap:3px;margin-left:2px}
+.thinking i{width:4px;height:4px;border-radius:50%;background:var(--soft);animation:blink 1.2s infinite}
+.thinking i:nth-child(2){animation-delay:.2s}.thinking i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+.frame{padding:12px;background:#fffaf8;border-radius:4px;box-shadow:0 1px 0 #e6c3ca,0 10px 34px rgba(140,70,90,.12)}
+#board{display:block;width:min(calc(100vw - 56px),440px,max(300px,calc((100vh - 330px)*.79)));height:auto;cursor:pointer;touch-action:manipulation;border-radius:2px}
+.actions{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;justify-content:center}
+.restart{font-family:inherit;font-size:14px;letter-spacing:4px;padding:9px 30px;border:1.5px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);cursor:pointer;transition:background .2s,color .2s}
+@media(max-width:440px){.restart{padding:8px 16px;letter-spacing:2px;font-size:13px}}
+.restart:disabled{opacity:.35;cursor:default}
+.restart:not(:disabled):hover{background:var(--btn);color:var(--btnInk);border-color:var(--btn)}
+.rule{margin-top:20px;max-width:340px;text-align:center;font-size:12px;letter-spacing:2px;line-height:1.9;color:var(--soft);user-select:none}
+.rule b{font-weight:600;color:var(--ink);letter-spacing:3px}
+.footer{margin-top:28px;font-size:11px;letter-spacing:4px;color:var(--line);user-select:none}
+.hidden{display:none!important}
+.back{position:absolute;top:14px;left:16px;z-index:5;font-size:13px;letter-spacing:3px;color:var(--soft);text-decoration:none;padding:6px 10px 6px 4px;font-family:inherit}
+.back:hover{color:var(--ink)}
+.help{position:absolute;top:12px;right:16px;z-index:5;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);font-family:inherit;font-size:16px;line-height:1;cursor:pointer;transition:background .2s,color .2s}
+.help:hover{background:var(--ink);color:#fbf1f0;border-color:var(--ink)}
+.rules-mask{position:fixed;inset:0;background:rgba(120,60,80,.18);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50;opacity:0;pointer-events:none;transition:opacity .25s}
+.rules-mask.on{opacity:1;pointer-events:auto}
+.rules{background:#fffaf8;max-width:440px;width:100%;max-height:84vh;overflow:auto;padding:26px 22px 20px;box-shadow:0 20px 50px rgba(140,70,90,.22);border-radius:4px;color:var(--ink);transform:translateY(10px);transition:transform .25s;text-align:left}
+.rules-mask.on .rules{transform:none}
+.rules h3{font-weight:400;font-size:20px;letter-spacing:8px;text-indent:8px;text-align:center;margin-bottom:6px}
+.rules h4{font-weight:600;font-size:14px;letter-spacing:2px;margin:16px 0 4px}
+.rules p,.rules li{font-size:13.5px;line-height:1.85;letter-spacing:.5px;color:#7a4a58}
+.rules ul{padding-left:1.2em}.rules li{margin:2px 0}.rules b{font-weight:600;color:var(--ink)}
+.rules .close{display:block;margin:20px auto 0;font-family:inherit;font-size:14px;letter-spacing:4px;padding:8px 30px;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+</style>
+</head>
+<body>
+<a class="back" href="./">‹ 桃源弈</a>
+<button class="help" id="helpBtn" aria-label="规则说明">?</button>
+<div class="rules-mask" id="rulesMask" role="dialog" aria-modal="true" aria-label="斗兽棋怎么下"><div class="rules"><h3>斗兽棋怎么下</h3><h4>怎么赢</h4><p>墨莓先走。让任何一只动物走进对方的兽穴（对面那朵大桃花），或者把对方的动物全吃光，你就赢了。</p>
+<h4>怎么走</h4><ul><li>每回合走一只动物，上下左右走一格，不能斜走。</li><li>不能走进自己的兽穴。</li></ul>
+<h4>谁吃谁</h4><ul><li>象 &gt; 狮 &gt; 虎 &gt; 豹 &gt; 狼 &gt; 狗 &gt; 猫 &gt; 鼠。大的吃小的，一样大的可以互吃。</li><li>唯一的例外：老鼠可以吃大象，大象却不能吃老鼠。</li></ul>
+<h4>河</h4><ul><li>只有老鼠能下水。水里的老鼠不能吃岸上的大象，岸上的动物也吃不到水里的老鼠；两只都在水里的老鼠可以互吃。</li><li>狮子和老虎可以横着或竖着，一下跳过整条河；如果河里有老鼠挡在路上，就不能跳。</li></ul>
+<h4>陷阱</h4><p>兽穴旁边的小桃花是陷阱。动物走进对方的陷阱，就变成最弱的，对方谁都能吃它。</p><button class="close">知道啦</button></div></div>
+<div class="title">桃 · 斗兽</div>
+<div class="sub">以小搏大，鼠亦可胜象</div>
+
+<div class="controls">
+  <div class="seg" id="modeSeg"><button class="on" data-m="pvc">和电脑下</button><button data-m="pvp">两人同下</button></div>
+  <div class="subrow" id="pvcOpts">
+    <select id="diff"><option value="easy">简单</option><option value="medium" selected>普通</option><option value="hard">困难</option></select>
+    <select id="side"><option value="1" selected>我执墨莓 · 先手</option><option value="2">我执珍珠 · 后手</option></select>
+  </div>
+</div>
+
+<div class="status" id="status"></div>
+<div class="frame"><canvas id="board" aria-label="斗兽棋棋盘"></canvas></div>
+<div class="actions"><button class="restart" id="undo">悔棋</button><button class="restart" id="restart">重新开始</button><button class="restart" id="sound">声音 · 开</button></div>
+<div class="rule"><b>象 › 狮 › 虎 › 豹 › 狼 › 狗 › 猫 › 鼠</b><br>同级互吃，鼠能吃象 · 鼠可下水 · 狮虎能跳河<br>踏进对方陷阱便人人可吃 · 先踏进对方兽穴者胜</div>
+<div class="footer">山 · 河 · 穴 · 桃</div>
+
+<script>
+// ================= 基础 =================
+const COLS=7,ROWS=9,N=63,CELL=62,PAD=16,R0=25;
+const cv=document.getElementById('board'),ctx=cv.getContext('2d');
+const DPR=Math.min(2,window.devicePixelRatio||1),W=COLS*CELL+PAD*2,H=ROWS*CELL+PAD*2;
+cv.width=W*DPR;cv.height=H*DPR;ctx.scale(DPR,DPR);
+const NAMES=['墨莓','珍珠'],ANIMAL=['','鼠','猫','狗','狼','豹','虎','狮','象'];
+const $=id=>document.getElementById(id);
+let board=new Int8Array(N),cnt=[0,0,0],cur,over,winner,winWhy,winT=0,sel=null,targets=[],hist=[],busy=false,gid=0,parts=[],mode='pvc',flip=false;
+const rand=(a,b)=>a+Math.random()*(b-a);
+const human=()=>+$('side').value,aiColor=()=>3-human();
+const RR=i=>(i/COLS)|0,CC=i=>i%COLS;
+// 逻辑坐标：第 0 行在上（珍珠的家），第 8 行在下（墨莓的家）；显示时可整盘旋转 180°，让“我”总在下方
+function XY(i){let r=RR(i),c=CC(i);if(flip){r=ROWS-1-r;c=COLS-1-c}return{x:PAD+c*CELL+CELL/2,y:PAD+r*CELL+CELL/2,vr:r,vc:c}}
+
+// ================= 地形 =================
+// 0 平地 1 河 2 墨莓的陷阱 3 珍珠的陷阱 4 墨莓的兽穴 5 珍珠的兽穴
+const T=new Int8Array(N),DEN1=59,DEN2=3;
+for(let r=3;r<=5;r++)for(const c of[1,2,4,5])T[r*COLS+c]=1;
+for(const[r,c]of[[8,2],[8,4],[7,3]])T[r*COLS+c]=2;
+for(const[r,c]of[[0,2],[0,4],[1,3]])T[r*COLS+c]=3;
+T[DEN1]=4;T[DEN2]=5;
+const trapOwner=i=>T[i]===2?1:T[i]===3?2:0;
+const NB=[],JMP=[];
+for(let i=0;i<N;i++){NB[i]=[];JMP[i]=[];const r=RR(i),c=CC(i);
+  for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){const nr=r+dr,nc=c+dc;if(nr<0||nr>=ROWS||nc<0||nc>=COLS)continue;const n=nr*COLS+nc;NB[i].push(n);
+    if(T[i]!==1&&T[n]===1){const cells=[];let rr=nr,cc=nc;while(rr>=0&&rr<ROWS&&cc>=0&&cc<COLS&&T[rr*COLS+cc]===1){cells.push(rr*COLS+cc);rr+=dr;cc+=dc}
+      if(rr>=0&&rr<ROWS&&cc>=0&&cc<COLS)JMP[i].push([rr*COLS+cc,cells])}}}
+const dist=(i,j)=>Math.abs(RR(i)-RR(j))+Math.abs(CC(i)-CC(j));
+
+// ================= 规则 =================
+// 棋子：墨莓为正数、珍珠为负数；1鼠 2猫 3狗 4狼 5豹 6虎 7狮 8象
+const effRank=(v,i)=>{const a=v>0?v:-v,p=v>0?1:2,to=trapOwner(i);return to&&to!==p?0:a};
+function beats(v,f,d,t){const ea=effRank(v,f),ed=effRank(d,t),a=v>0?v:-v,dd=d>0?d:-d;
+  if(ed===0)return true;                 // 掉进陷阱的棋子，谁都能吃
+  if(a===1&&dd===8)return ea>0;          // 鼠吃象
+  if(a===8&&dd===1)return false;         // 象不能吃鼠
+  return ea>=ed}
+function canEnter(b,f,t){const v=b[f],p=v>0?1:2,a=v>0?v:-v,tt=T[t];
+  if((tt===4&&p===1)||(tt===5&&p===2))return false;   // 不能进自己的兽穴
+  const d=b[t],fw=T[f]===1;
+  if(tt===1){if(a!==1)return false;if(d===0)return true;if(d*v>0)return false;return fw}   // 只有鼠能下水；水里的鼠只能被水里的鼠吃
+  if(d===0)return true;if(d*v>0)return false;
+  if(fw)return false;                                  // 水里的鼠吃不到岸上的棋子
+  return beats(v,f,d,t)}
+function genFrom(b,i,out){const v=b[i];if(!v)return;
+  for(const n of NB[i])if(canEnter(b,i,n))out.push(i<<6|n);
+  const a=v>0?v:-v;
+  if((a===6||a===7)&&T[i]!==1)for(const[d,cells]of JMP[i]){if(cells.some(x=>b[x]))continue;   // 河里有鼠挡着就跳不过去
+    const dv=b[d];if(dv===0||(dv*v<0&&beats(v,i,dv,d)))out.push(i<<6|d)}}
+function genMoves(b,side){const out=[],s=side===1?1:-1;for(let i=0;i<N;i++)if(b[i]*s>0)genFrom(b,i,out);return out}
+function make(b,f,t){const cp=b[t];b[t]=b[f];b[f]=0;if(cp)cnt[cp>0?1:2]--;return cp}
+function unmake(b,f,t,cp){b[f]=b[t];b[t]=cp;if(cp)cnt[cp>0?1:2]++}
+const denOf=p=>p===1?5:4;   // p 要攻进的兽穴地形码
+function countPieces(){cnt[1]=cnt[2]=0;for(let i=0;i<N;i++)if(board[i])cnt[board[i]>0?1:2]++}
+function layout(){board.fill(0);
+  const top={'0,0':7,'0,6':6,'1,1':3,'1,5':2,'2,0':1,'2,2':5,'2,4':4,'2,6':8};
+  for(const k in top){const[r,c]=k.split(',').map(Number);board[r*COLS+c]=-top[k];board[(ROWS-1-r)*COLS+(COLS-1-c)]=top[k]}
+  countPieces()}
+
+// ================= 桃花信笺：画法（沿用五子棋） =================
+const fibers=[];for(let i=0;i<700;i++)fibers.push([Math.random()*W,Math.random()*H,Math.random()*8+2,Math.random()*3,Math.random()*.06]);
+function blob(x,y,r,col,a){const b=ctx.createRadialGradient(x,y,0,x,y,r);b.addColorStop(0,col.replace('A',a));b.addColorStop(1,col.replace('A',0));ctx.fillStyle=b;ctx.fillRect(x-r,y-r,r*2,r*2)}
+function drawShadow(x,y,p,s,lift=0){const R=R0*s,t=p===1?'70,25,45':'150,110,130',off=1+lift*1.6,sp=1+lift*.35,a=1-lift*.55;
+  const sx=x+R*.18*off,sy=y+R*.26*off,sg=ctx.createRadialGradient(sx,sy,R*.3,sx,sy,R*1.25*sp);
+  sg.addColorStop(0,`rgba(${t},${.30*a})`);sg.addColorStop(.6,`rgba(${t},${.12*a})`);sg.addColorStop(1,`rgba(${t},0)`);ctx.fillStyle=sg;ctx.beginPath();ctx.ellipse(sx,sy,R*1.25*sp,R*1.1*sp,0,0,7);ctx.fill();
+  if(lift>.6)return;const cx=x+R*.05,cy=y+R*.12,cg=ctx.createRadialGradient(cx,cy,R*.75,cx,cy,R*1.04);cg.addColorStop(0,`rgba(${t},${.35*(1-lift/.6)})`);cg.addColorStop(1,`rgba(${t},0)`);ctx.fillStyle=cg;ctx.beginPath();ctx.arc(cx,cy,R*1.04,0,7);ctx.fill()}
+function drawStone(x,y,p,s){const R=R0*s;
+  ctx.save();ctx.beginPath();ctx.arc(x,y,R,0,7);ctx.clip();
+  const base=ctx.createRadialGradient(x-R*.35,y-R*.4,R*.1,x,y,R*1.05);
+  if(p===1){base.addColorStop(0,'#6d4a63');base.addColorStop(.45,'#3e2235');base.addColorStop(1,'#1c0c17')}
+  else{base.addColorStop(0,'#fffdfb');base.addColorStop(.5,'#f6eeee');base.addColorStop(.85,'#e6d9df');base.addColorStop(1,'#d3c4cf')}
+  ctx.fillStyle=base;ctx.fillRect(x-R,y-R,R*2,R*2);
+  ctx.globalCompositeOperation=p===1?'screen':'soft-light';const k=p===1?1:1.6;
+  blob(x+R*.35,y-R*.15,R*.75,'rgba(120,200,190,A)',.22*k);blob(x-R*.4,y+R*.35,R*.8,'rgba(230,140,190,A)',.25*k);blob(x+R*.25,y+R*.45,R*.6,'rgba(170,150,240,A)',.2*k);
+  ctx.globalCompositeOperation='source-over';
+  const rim=ctx.createRadialGradient(x-R*.1,y-R*.1,R*.7,x,y,R);rim.addColorStop(0,'rgba(255,240,245,0)');rim.addColorStop(1,p===1?'rgba(255,200,225,.22)':'rgba(255,255,255,.35)');ctx.fillStyle=rim;ctx.fillRect(x-R,y-R,R*2,R*2);
+  // 高光放在字下面，字像刻在珍珠里
+  blob(x-R*.32,y-R*.38,R*.55,'rgba(255,255,255,A)',p===1?.3:.6);
+  ctx.restore()}
+// 珍珠上的字：细细一圈刻线 + 刻出来的字
+function drawPiece(x,y,v,s){const p=v>0?1:2,a=v>0?v:-v,R=R0*s;
+  drawStone(x,y,p,s);
+  ctx.save();ctx.strokeStyle=p===1?'rgba(255,215,230,.26)':'rgba(138,74,92,.22)';ctx.lineWidth=.8;ctx.beginPath();ctx.arc(x,y,R*.83,0,7);ctx.stroke();
+  ctx.font=`600 ${Math.round(R*1.12)}px 'Noto Serif SC','Songti SC','STSong',serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+  const ty=y+R*.06;
+  ctx.fillStyle=p===1?'rgba(0,0,0,.45)':'rgba(255,255,255,.95)';ctx.fillText(ANIMAL[a],x+.7,ty+.8);
+  ctx.fillStyle=p===1?'#f8e3ea':'#6e2240';ctx.fillText(ANIMAL[a],x,ty);
+  ctx.restore();
+  blob(x-R*.36,y-R*.42,R*.13,'rgba(255,255,255,A)',p===1?.85:1)}
+function petal(x,y,s,col){ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,y+s);ctx.bezierCurveTo(x-s*1.0,y+s*.25,x-s*.7,y-s*.85,x,y-s);ctx.bezierCurveTo(x+s*.7,y-s*.85,x+s*1.0,y+s*.25,x,y+s);ctx.fill()}
+function petalFlower(x,y,s){ctx.save();ctx.translate(x,y);
+  for(let k=0;k<5;k++){ctx.save();ctx.rotate(k*Math.PI*2/5);const g=ctx.createRadialGradient(0,0,s*.1,0,0,s*1.7);g.addColorStop(0,'#d9577f');g.addColorStop(.3,'#f08aa8');g.addColorStop(1,'#f9bccb');petal(0,-s*.9,s*.78,g);ctx.restore()}
+  ctx.strokeStyle='#c94d74';ctx.lineWidth=.45;ctx.fillStyle='#f5cf6a';for(let k=0;k<9;k++){const a=k*Math.PI*2/9+.2,l=s*(.42+.12*(k%2));ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(a)*l,Math.sin(a)*l);ctx.stroke();ctx.beginPath();ctx.arc(Math.cos(a)*l,Math.sin(a)*l,s*.07,0,7);ctx.fill()}
+  ctx.restore()}
+function spawnPetals(x,y,first){
+  if(first)for(let i=0;i<46;i++)parts.push({x:rand(-60,W),y:rand(-H*.6,-10),vx:rand(15,45),vy:rand(30,70),rot:rand(0,6),vr:rand(-2,2),life:rand(5,7),sz:rand(4,7),col:['#f6a5bb','#f18fab','#fbc4d2','#f7b3c5'][i%4]});
+  for(let i=0;i<5;i++)parts.push({x,y,vx:rand(-50,50),vy:rand(-60,-10),rot:rand(0,6),vr:rand(-3,3),life:rand(1.5,2.5),sz:rand(3,5),col:'#f18fab'})}
+
+// ================= 棋盘底图 =================
+function drawBg(){
+  ctx.fillStyle='#fffaf8';ctx.fillRect(0,0,W,H);
+  ctx.lineWidth=.6;for(const[x,y,l,a,o]of fibers){ctx.strokeStyle=`rgba(200,140,150,${o})`;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(a)*l,y+Math.sin(a)*l);ctx.stroke()}
+  // 河：像国画里淡淡染开的一汪春水，边缘晕开；几笔水纹，水面漂着几片桃花瓣
+  const wy=PAD+3*CELL;
+  for(const c0 of[1,4]){const x0=PAD+c0*CELL,w=2*CELL,h=3*CELL;
+    ctx.save();ctx.beginPath();ctx.rect(x0,wy,w,h);ctx.clip();
+    ctx.save();ctx.filter='blur(6px)';const g=ctx.createLinearGradient(x0,wy,x0+w,wy+h);g.addColorStop(0,'rgba(178,222,222,.85)');g.addColorStop(.55,'rgba(150,206,210,.8)');g.addColorStop(1,'rgba(176,220,220,.85)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.roundRect(x0+5,wy+5,w-10,h-10,14);ctx.fill();ctx.restore();
+    // 水纹：两头细、中间粗的笔触
+    let sd=c0*13+1;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
+    for(let k=0;k<7;k++){const yy=wy+20+k*(h-40)/6,xs=x0+10+rnd()*20,xe=x0+w-10-rnd()*20,ph=rnd()*6;
+      for(let j=0;j<3;j++){ctx.strokeStyle=`rgba(80,150,165,${.22-j*.06})`;ctx.lineWidth=1.6-j*.5;ctx.beginPath();
+        for(let xx=xs;xx<=xe;xx+=3){const t=(xx-xs)/(xe-xs),y2=yy+Math.sin(xx/9+ph)*2.2*Math.sin(t*Math.PI)+j*.6;xx===xs?ctx.moveTo(xx,y2):ctx.lineTo(xx,y2)}ctx.stroke()}}
+    ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=1;for(let k=0;k<4;k++){const yy=wy+34+k*(h-60)/3;ctx.beginPath();ctx.moveTo(x0+18+k*6,yy);ctx.quadraticCurveTo(x0+w/2,yy-3,x0+w-22,yy+1);ctx.stroke()}
+    // 漂着的桃花瓣
+    for(let k=0;k<3;k++){const px=x0+20+rnd()*(w-40),py=wy+20+rnd()*(h-40);ctx.save();ctx.translate(px,py);ctx.rotate(rnd()*6);ctx.globalAlpha=.85;petal(0,0,4.2,['#f6a5bb','#f18fab','#fbc4d2'][k]);ctx.restore()}
+    ctx.restore()}
+  // 格子线（河里不画，水面更干净）
+  ctx.strokeStyle='rgba(170,100,120,.42)';ctx.lineWidth=.8;
+  for(let i=0;i<N;i++)if(T[i]!==1){const{x,y}=XY(i);ctx.strokeRect(x-CELL/2,y-CELL/2,CELL,CELL)}
+  ctx.strokeStyle='rgba(170,100,120,.5)';ctx.lineWidth=1.4;ctx.strokeRect(PAD,PAD,COLS*CELL,ROWS*CELL);
+  ctx.lineWidth=.6;ctx.strokeRect(PAD-5,PAD-5,COLS*CELL+10,ROWS*CELL+10);
+  // 陷阱（小桃花）和兽穴（大桃花，外面一圈是主人的颜色）
+  for(let i=0;i<N;i++){const tt=T[i];if(tt<2)continue;const{x,y}=XY(i);
+    if(tt<=3){petalFlower(x,y,6)}
+    else{
+      ctx.strokeStyle=tt===4?'rgba(110,34,64,.55)':'rgba(190,170,184,.9)';ctx.lineWidth=tt===4?1.2:1.6;ctx.beginPath();ctx.arc(x,y,R0+2,0,7);ctx.stroke();
+      ctx.lineWidth=.6;ctx.beginPath();ctx.arc(x,y,R0-3,0,7);ctx.stroke();petalFlower(x,y,10.5)}}
+}
+
+// ================= 绘制循环（只在有动画时跑） =================
+let raf=null,lastT=0;
+const ANIM=260;
+function needAnim(t){const lm=hist[hist.length-1];return parts.length>0||(lm&&lm.t0&&t-lm.t0<ANIM+50)||(winner&&t-winT<4000)}
+function frame(t){
+  const dt=lastT?Math.min(.05,(t-lastT)/1000):0;lastT=t;
+  drawBg();
+  const lm=hist[hist.length-1],age=lm&&lm.t0?t-lm.t0:1e9,anim=age<ANIM,k=Math.min(1,age/ANIM),e=1-Math.pow(1-k,3);
+  // 上一步标记
+  if(lm){ctx.fillStyle='rgba(240,150,170,.17)';for(const i of[lm.f,lm.t]){const{x,y}=XY(i);ctx.fillRect(x-CELL/2+2,y-CELL/2+2,CELL-4,CELL-4)}
+    const a=XY(lm.f);ctx.fillStyle='rgba(232,137,158,.7)';ctx.beginPath();ctx.arc(a.x,a.y,2.4,0,7);ctx.fill()}
+  // 可走的点（空格）
+  if(sel!=null&&canPlay())for(const m of targets){const to=m&63;if(board[to])continue;const{x,y}=XY(to);
+    ctx.fillStyle='rgba(232,137,158,.25)';ctx.beginPath();ctx.arc(x,y,11,0,7);ctx.fill();ctx.fillStyle='rgba(222,108,138,.9)';ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill()}
+  // 被吃掉的棋子先淡出
+  if(anim&&lm.cap){const{x,y}=XY(lm.t);ctx.globalAlpha=1-e;drawShadow(x,y,lm.cap>0?1:2,1);drawPiece(x,y,lm.cap,1-.1*e);ctx.globalAlpha=1}
+  const items=[];
+  for(let i=0;i<N;i++){const v=board[i];if(!v)continue;const o=XY(i);let x=o.x,y=o.y,s=1,lift=0;
+    if(anim&&lm&&i===lm.t){const f=XY(lm.f);x=f.x+(o.x-f.x)*e;y=f.y+(o.y-f.y)*e;lift=Math.sin(k*Math.PI)*.8;s=1+.08*Math.sin(k*Math.PI)}
+    else if(i===sel){lift=.4}
+    if(winner&&i===lm?.t){const wt=(t-winT)/1000;if(wt>0&&wt<3)s*=1+.12*Math.sin(wt*5)*(1-wt/3)}
+    items.push([x,y,v,s,lift,i])}
+  for(const[x,y,v,s,l,i]of items){
+    if(T[i]===1){ctx.strokeStyle='rgba(96,164,178,.5)';ctx.lineWidth=.9;ctx.beginPath();ctx.ellipse(x,y+3,R0*1.18,R0*.95,0,0,7);ctx.stroke()}   // 水里的鼠：一圈涟漪
+    drawShadow(x,y,v>0?1:2,s,l)}
+  for(const[x,y,v,s,l,i]of items){drawPiece(x,y-l*5,v,s);
+    const to=trapOwner(i);if(to&&to!==(v>0?1:2)){ctx.strokeStyle='rgba(214,110,138,.8)';ctx.lineWidth=1.1;ctx.setLineDash([2.5,3]);ctx.beginPath();ctx.arc(x,y-l*5,R0+3.5,0,7);ctx.stroke();ctx.setLineDash([])}}   // 在陷阱里：虚线圈
+  // 选中圈 + 可吃的圈
+  if(sel!=null&&canPlay()){const{x,y}=XY(sel);ctx.strokeStyle='rgba(214,110,138,.9)';ctx.lineWidth=1.6;ctx.setLineDash([4,3]);ctx.beginPath();ctx.arc(x,y-2,R0+5,0,7);ctx.stroke();ctx.setLineDash([]);
+    for(const m of targets){const to=m&63;if(!board[to])continue;const q=XY(to);ctx.strokeStyle='rgba(214,110,138,.9)';ctx.lineWidth=2.2;ctx.beginPath();ctx.arc(q.x,q.y,R0+3.5,0,7);ctx.stroke()}}
+  for(const p of parts){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.rot+=p.vr*dt;p.vx+=Math.sin(t/500+p.y*.02)*.8;
+    ctx.globalAlpha=Math.max(0,Math.min(1,p.life));ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);petal(0,0,p.sz,p.col);ctx.restore();ctx.globalAlpha=1}
+  parts=parts.filter(p=>p.life>0);
+  raf=needAnim(t)?requestAnimationFrame(frame):null;if(!raf)lastT=0}
+function kick(){if(!raf)raf=requestAnimationFrame(frame)}
+if(document.fonts&&document.fonts.load)document.fonts.load("600 24px 'Noto Serif SC'",'象狮虎豹狼狗猫鼠').then(kick,()=>{});
+
+// ================= 对局流程 =================
+function canPlay(){return!over&&!busy&&(mode==='pvp'||cur===human())}
+function setStatus(){const el=$('status');el.classList.toggle('win',over&&!!winner);
+  if(!over){const who=mode==='pvc'?(cur===human()?'轮到你（'+NAMES[cur-1]+'）':NAMES[cur-1]+'在想'):'轮到'+NAMES[cur-1];
+    const tip=canPlay()?(sel==null?' · 点一枚棋子':' · 点亮点走过去'):'';
+    el.innerHTML=`<span class="dot p${cur}"></span> ${who}${tip}`+(busy?'<span class="thinking"><i></i><i></i><i></i></span>':'')}
+  else{const why={den:'踏进了兽穴',all:'吃光了对方',stuck:'对方无路可走'}[winWhy];
+    el.innerHTML=`<span class="dot p${winner}"></span> `+(mode==='pvc'?(winner===human()?`你赢啦！${why}`:`${NAMES[winner-1]}赢了，${why}`):`${NAMES[winner-1]}赢啦！${why}`)}
+  const h=human();$('undo').disabled=!(mode==='pvc'?hist.some(m=>m.p===h):hist.length)}
+function reset(){
+  if(hist&&hist.length)sfx('pearlGather',.8,1);
+  gid++;flip=mode==='pvc'&&human()===2;layout();cur=1;over=false;winner=null;winWhy=null;winT=0;sel=null;targets=[];hist=[];busy=false;parts=[];
+  setStatus();kick();
+  if(mode==='pvc'&&aiColor()===1)thinkThen()}
+function select(i){sel=i;targets=[];if(i!=null)genFrom(board,i,targets);setStatus();kick()}
+function doMove(f,t){
+  const p=cur,cp=make(board,f,t);hist.push({f,t,p,cap:cp,t0:performance.now()});sel=null;targets=[];
+  setTimeout(()=>clack(p),150);if(cp)setTimeout(()=>clack(3-p,.78),260);
+  const opp=3-p;
+  if(T[t]===denOf(p)){over=true;winner=p;winWhy='den'}
+  else if(cnt[opp]===0){over=true;winner=p;winWhy='all'}
+  else{cur=opp;if(!genMoves(board,opp).length){over=true;winner=p;winWhy='stuck';cur=p}}
+  if(over){winT=performance.now();const q=XY(t);[0,1,2,3,4].forEach(i=>setTimeout(()=>{if(winner){spawnPetals(q.x+rand(-30,30),q.y+rand(-20,20),i===0);kick()}},i*140))}
+  setStatus();kick();
+  if(!over&&mode==='pvc'&&cur===aiColor())thinkThen()}
+function thinkThen(){busy=true;setStatus();const id=gid;setTimeout(()=>{if(id===gid)aiMove()},420)}
+
+function toCell(e){const rc=cv.getBoundingClientRect(),mx=(e.clientX-rc.left)*(W/rc.width),my=(e.clientY-rc.top)*(H/rc.height);
+  let c=Math.floor((mx-PAD)/CELL),r=Math.floor((my-PAD)/CELL);if(r<0||r>=ROWS||c<0||c>=COLS)return null;
+  if(flip){r=ROWS-1-r;c=COLS-1-c}return r*COLS+c}
+cv.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;if(!canPlay())return;const i=toCell(e);if(i==null)return;
+  if(sel!=null&&targets.some(m=>(m&63)===i)){doMove(sel,i);return}
+  const s=cur===1?1:-1;
+  if(board[i]*s>0&&i!==sel){select(i);sfx('pearlPick',.45,1.05)}else select(null)});
+
+// ================= 声音（只用已有的珍珠声，见 sounds/CREDITS.md） =================
+let soundOn=true;try{soundOn=localStorage.getItem('gomoku-sound')!=='off'}catch(e){}
+const POOL={},unlocked={v:false};
+function pool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
+function sfx(f,vol,rate){if(!soundOn)return;const ps=pool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
+// iPhone 要求声音第一次由手指触发：第一次点击时把所有声音静音播一下，之后电脑落子也能出声
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
+function clack(p,vol=.8){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),vol,(p===1?.95:1.04)+(Math.random()-.5)*.04)}
+function syncSound(){$('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}
+
+// ================= 悔棋：和电脑下时退回到你上一步之前 =================
+function undo(){if(!hist.length)return;
+  const popOne=()=>{const m=hist.pop();unmake(board,m.f,m.t,m.cap);return m};
+  if(mode==='pvc'){const h=human();if(!hist.some(m=>m.p===h))return;while(hist[hist.length-1].p!==h)popOne();popOne();cur=h}
+  else cur=popOne().p;
+  gid++;busy=false;for(const m of hist)m.t0=0;
+  over=false;winner=null;winWhy=null;winT=0;parts=[];sel=null;targets=[];sfx('pearlPick',.7,1);setStatus();kick()}
+
+// ================= 电脑：alpha-beta + 迭代加深 =================
+const MATE=100000,MAT=[0,42,24,34,46,62,82,92,100];
+let nodes=0,abort=false,deadline=0;
+function evalPos(b,side){let s=0;
+  for(let i=0;i<N;i++){const v=b[i];if(!v)continue;const p=v>0?1:2,a=v>0?v:-v,to=trapOwner(i);
+    let val=MAT[a];if(to&&to!==p)val*=.25;                         // 在对方陷阱里等于送菜
+    const d=dist(i,p===1?DEN2:DEN1);let adv=(14-d)*(a===8?1.2:2.5);if(d<=3)adv+=(4-d)*(a===8?6:12);   // 离对方兽穴越近越好
+    s+=(p===side?1:-1)*(val+adv)}
+  return s}
+function ordered(b,ms,side){const tgt=side===1?DEN2:DEN1,tc=denOf(side);
+  const sc=ms.map(m=>{const f=m>>6,t=m&63,v=b[f],cp=b[t];let s=(dist(f,tgt)-dist(t,tgt))*4;if(cp)s+=1000+(cp>0?cp:-cp)*10-(v>0?v:-v);if(T[t]===tc)s+=1e5;return[s,m]});
+  sc.sort((a,b)=>b[0]-a[0]);return sc.map(x=>x[1])}
+function search(side,depth,alpha,beta,ply){
+  if((++nodes&511)===0&&performance.now()>deadline)abort=true;
+  if(abort)return 0;
+  const ms=genMoves(board,side);if(!ms.length)return-MATE+ply;
+  if(depth===0)return evalPos(board,side);
+  const opp=3-side,tc=denOf(side);let best=-Infinity;
+  for(const m of ordered(board,ms,side)){const f=m>>6,t=m&63,cp=make(board,f,t);let sc;
+    if(T[t]===tc||cnt[opp]===0)sc=MATE-ply-1;else sc=-search(opp,depth-1,-beta,-alpha,ply+1);
+    unmake(board,f,t,cp);if(abort)return 0;
+    if(sc>best)best=sc;if(sc>alpha)alpha=sc;if(alpha>=beta)break}
+  return best}
+function aiPick(side,diff){
+  const maxD=diff==='easy'?2:diff==='medium'?3:9,limit=diff==='hard'?420:diff==='medium'?500:200,noise=diff==='easy'?30:2;
+  deadline=performance.now()+limit;abort=false;nodes=0;
+  let root=genMoves(board,side);if(!root.length)return null;
+  const tc=denOf(side),opp=3-side;
+  for(const m of root)if(T[m&63]===tc)return m;
+  root=ordered(board,root,side);let best=root[0];
+  for(let d=1;d<=maxD;d++){let alpha=-Infinity,bs=-Infinity,bm=null;
+    for(const m of root){const f=m>>6,t=m&63,cp=make(board,f,t);
+      let sc=cnt[opp]===0?MATE:-search(opp,d-1,-Infinity,diff==='easy'?Infinity:-alpha,1);
+      unmake(board,f,t,cp);if(abort)break;
+      sc+=Math.random()*noise;if(sc>bs){bs=sc;bm=m}if(diff!=='easy'&&sc>alpha)alpha=sc}
+    if(abort||bm==null)break;best=bm;root=[bm,...root.filter(x=>x!==bm)];if(Math.abs(bs)>MATE-100)break}
+  return best}
+function aiMove(){
+  if(over){busy=false;return}
+  const m=aiPick(aiColor(),$('diff').value);busy=false;if(m==null){setStatus();return}doMove(m>>6,m&63)}
+
+// ================= 控件 =================
+$('modeSeg').onclick=e=>{const b=e.target.closest('button');if(!b||b.dataset.m===mode)return;mode=b.dataset.m;
+  document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on',x===b));$('pvcOpts').classList.toggle('hidden',mode!=='pvc');reset()};
+$('diff').onchange=reset;
+$('side').onchange=reset;
+$('restart').onclick=reset;
+$('undo').onclick=undo;
+$('sound').onclick=()=>{soundOn=!soundOn;try{localStorage.setItem('gomoku-sound',soundOn?'on':'off')}catch(e){}syncSound();if(soundOn)clack(1)};
+// 给自动检查用的小窗口：摆局面、查可走的格子
+window.__j={setup(list,p){board.fill(0);for(const[r,c,v]of list)board[r*COLS+c]=v;countPieces();gid++;cur=p;over=false;winner=null;hist=[];sel=null;targets=[];busy=false;mode='pvp';flip=false;setStatus();kick()},
+  legal(r,c){const o=[];genFrom(board,r*COLS+c,o);return o.map(m=>[RR(m&63),CC(m&63)])},
+  move(f,t){doMove(f[0]*COLS+f[1],t[0]*COLS+t[1])},
+  get over(){return over},get winner(){return winner},get cur(){return cur},get hist(){return hist.length},get busy(){return busy},
+  get board(){return Array.from(board)}};
+syncSound();
+reset();
+</script>
+<script>
+(function(){const m=document.getElementById('rulesMask'),open=()=>m.classList.add('on'),close=()=>m.classList.remove('on');
+  document.getElementById('helpBtn').addEventListener('click',open);m.addEventListener('click',e=>{if(e.target===m||e.target.classList.contains('close'))close()});
+  addEventListener('keydown',e=>{if(e.key==='Escape')close()})})();
+</script>
+</body>
+</html>

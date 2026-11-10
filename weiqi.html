@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>围棋 · 桃源弈</title>
+<meta name="description" content="一盘桃花信笺风格的围棋，9、13、19 路，可以和电脑下，也可以两人同下。">
+<meta name="theme-color" content="#fbf1f0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='26' fill='%236e2240'/%3E%3Cellipse cx='24' cy='22' rx='8' ry='5' fill='%23ffdcea' opacity='.5' transform='rotate(-30 24 22)'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#fbf1f0;--ink:#8a4a5c;--soft:#b98593;--line:#e6c3ca;--btn:#8a4a5c;--btnInk:#fbf1f0}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:36px 16px 40px;overflow-x:hidden;
+  background:var(--bg);color:var(--ink);font-family:'Noto Serif SC','Songti SC',serif;
+  background-image:radial-gradient(ellipse at 15% 10%,rgba(240,190,200,.35),transparent 50%),radial-gradient(ellipse at 90% 90%,rgba(220,200,230,.35),transparent 50%);
+  animation:fadein .9s ease both}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.title{font-size:36px;font-weight:300;letter-spacing:16px;text-indent:16px;user-select:none;line-height:1.2;text-align:center}
+.sub{font-size:13px;letter-spacing:3px;color:var(--soft);margin:10px 0 22px;text-align:center}
+.controls{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:16px}
+.seg{display:flex}
+.seg button{font-family:inherit;font-size:13px;letter-spacing:2px;padding:7px 18px;border:1.5px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);cursor:pointer;transition:background .2s,color .2s;border-radius:0}
+.seg button+button{border-left:none}
+.seg button.on{background:var(--btn);color:var(--btnInk);border-color:var(--btn)}
+.seg button.off{opacity:.4}
+.subrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+select{font-family:inherit;font-size:13px;letter-spacing:1px;color:var(--ink);background:rgba(255,255,255,.7);border:1.5px solid var(--line);padding:6px 30px 6px 12px;cursor:pointer;appearance:none;-webkit-appearance:none;border-radius:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23b98593'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+select:focus{outline:none;border-color:var(--ink)}
+.status{min-height:28px;font-size:15px;letter-spacing:2px;color:var(--soft);margin-bottom:12px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;user-select:none;text-align:center;max-width:548px;line-height:1.6}
+.status.win{color:var(--ink);font-size:17px}
+.dot{width:16px;height:16px;border-radius:50%;display:inline-block;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+.dot.p1{background:radial-gradient(circle at 35% 35%,#6d4a63,#3e2235 45%,#1c0c17)}
+.dot.p2{background:radial-gradient(circle at 35% 35%,#fffdfb,#f6eeee 50%,#d3c4cf)}
+.thinking{display:inline-flex;gap:3px;margin-left:2px}
+.thinking i{width:4px;height:4px;border-radius:50%;background:var(--soft);animation:blink 1.2s infinite}
+.thinking i:nth-child(2){animation-delay:.2s}.thinking i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+.frame{padding:12px;background:#fffaf8;border-radius:4px;box-shadow:0 1px 0 #e6c3ca,0 10px 34px rgba(140,70,90,.12)}
+#board{display:block;width:min(calc(100vw - 56px),548px);height:auto;cursor:pointer;touch-action:manipulation;border-radius:2px}
+.info{min-height:20px;font-size:12px;letter-spacing:1px;color:var(--soft);margin-top:14px;text-align:center;max-width:548px;line-height:1.8}
+.rule{font-size:11px;letter-spacing:1px;color:var(--soft);opacity:.85;margin-top:4px;text-align:center;max-width:548px;line-height:1.8}
+.actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;justify-content:center}
+.restart{font-family:inherit;font-size:14px;letter-spacing:4px;padding:9px 24px;border:1.5px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);cursor:pointer;transition:background .2s,color .2s}
+@media(max-width:440px){.restart{padding:8px 13px;letter-spacing:2px;font-size:13px}.actions{gap:8px}.title{font-size:32px;letter-spacing:12px;text-indent:12px}}
+.restart:disabled{opacity:.35;cursor:default}
+.restart:not(:disabled):hover{background:var(--btn);color:var(--btnInk);border-color:var(--btn)}
+.footer{margin-top:34px;font-size:11px;letter-spacing:4px;color:var(--line);user-select:none}
+.hidden{display:none!important}
+.back{position:absolute;top:14px;left:16px;z-index:5;font-size:13px;letter-spacing:3px;color:var(--soft);text-decoration:none;padding:6px 10px 6px 4px;font-family:inherit}
+.back:hover{color:var(--ink)}
+.help{position:absolute;top:12px;right:16px;z-index:5;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);font-family:inherit;font-size:16px;line-height:1;cursor:pointer;transition:background .2s,color .2s}
+.help:hover{background:var(--ink);color:#fbf1f0;border-color:var(--ink)}
+.rules-mask{position:fixed;inset:0;background:rgba(120,60,80,.18);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50;opacity:0;pointer-events:none;transition:opacity .25s}
+.rules-mask.on{opacity:1;pointer-events:auto}
+.rules{background:#fffaf8;max-width:440px;width:100%;max-height:84vh;overflow:auto;padding:26px 22px 20px;box-shadow:0 20px 50px rgba(140,70,90,.22);border-radius:4px;color:var(--ink);transform:translateY(10px);transition:transform .25s;text-align:left}
+.rules-mask.on .rules{transform:none}
+.rules h3{font-weight:400;font-size:20px;letter-spacing:8px;text-indent:8px;text-align:center;margin-bottom:6px}
+.rules h4{font-weight:600;font-size:14px;letter-spacing:2px;margin:16px 0 4px}
+.rules p,.rules li{font-size:13.5px;line-height:1.85;letter-spacing:.5px;color:#7a4a58}
+.rules ul{padding-left:1.2em}.rules li{margin:2px 0}.rules b{font-weight:600;color:var(--ink)}
+.rules .close{display:block;margin:20px auto 0;font-family:inherit;font-size:14px;letter-spacing:4px;padding:8px 30px;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+</style>
+</head>
+<body>
+<a class="back" href="./">‹ 桃源弈</a>
+<button class="help" id="helpBtn" aria-label="规则说明">?</button>
+<div class="rules-mask" id="rulesMask" role="dialog" aria-modal="true" aria-label="围棋怎么下"><div class="rules"><h3>围棋怎么下</h3><h4>目标</h4><p>用棋子围出更大的地盘。下完后数一数：自己活着的棋子，加上被自己围住的空点，多的一方赢。</p>
+<h4>怎么下</h4><ul><li>墨莓（黑）先下，双方轮流把棋子放在交叉点上，放下就不能再挪。</li><li>棋子上下左右挨着的空点叫「气」，连在一起的同色棋子共用气。</li><li>一块棋的气全部被对方堵住，就会被「提」掉，从棋盘上拿走。</li></ul>
+<h4>不能下的地方</h4><ul><li><b>自杀</b>：落下去自己就没有气、又提不到对方的子，这种地方不能下。</li><li><b>打劫</b>：自己的一颗子刚被提掉，不能马上在原地把对方那颗提回来，要先在别处下一手。</li></ul>
+<h4>结束和数子</h4><ul><li>觉得已经没有地方好下了，就点「停一手」。双方连着各停一手，棋局结束。</li><li>结束后，点一下已经活不了的棋块，把它标成死子，再点「确认数子」看结果。</li><li>黑方先下占了便宜，所以白方（珍珠）额外加分：9 路贴 7 点，13 路和 19 路贴 7.5 点。</li><li>也可以随时点「认输」。</li></ul>
+<h4>初学建议</h4><p>先从 9 路小棋盘下起，一盘十几分钟就能下完。</p><button class="close">知道啦</button></div></div>
+<div class="title">桃 · 围棋</div>
+<div class="sub">一子一子，围出一片春天</div>
+
+<div class="controls">
+  <div class="seg" id="modeSeg"><button class="on" data-m="pvc">和电脑下</button><button data-m="pvp">两人同下</button></div>
+  <div class="seg" id="sizeSeg"><button class="on" data-n="9">9 路</button><button data-n="13">13 路</button><button data-n="19">19 路</button></div>
+  <div class="subrow" id="pvcOpts">
+    <select id="side"><option value="1" selected>我执墨莓 · 先手</option><option value="2">我执珍珠 · 后手</option></select>
+  </div>
+</div>
+
+<div class="status" id="status"></div>
+<div class="frame"><canvas id="board" aria-label="围棋棋盘"></canvas></div>
+<div class="info" id="info"></div>
+<div class="rule" id="rule"></div>
+<div class="actions">
+  <button class="restart" id="pass">停一手</button><button class="restart" id="undo">悔棋</button><button class="restart" id="resign">认输</button>
+  <button class="restart hidden" id="confirm">确认数子</button><button class="restart hidden" id="resume">继续下棋</button>
+  <button class="restart" id="restart">重新开始</button><button class="restart" id="sound">声音 · 开</button>
+</div>
+<div class="footer">落 · 桃 · 成 · 诗</div>
+
+<script>
+// ================= 基础 =================
+const TOT=548,PAD=26;
+const cv=document.getElementById('board'),ctx=cv.getContext('2d');
+const DPR=Math.min(2,window.devicePixelRatio||1),total=TOT;
+const NAMES=['墨莓','珍珠'];
+const KOMI={9:7,13:7.5,19:7.5};
+const KOMI_TXT={9:'7 点',13:'3.75 子（7.5 点）',19:'3.75 子（7.5 点）'};
+let N=9,N2=81,CELL=0,R0=0,NB=[],DG=[],STARS=[];
+let mode='pvc',phase='play',bd,cur,caps,passes,last,dead=new Set(),result=null,snaps=[],stoneT,fades=[],parts=[];
+let hover=null,hoverOK=false,touchPending=null,gid=0,busy=false,flashMsg='',flashTimer=0,animUntil=0,resignArm=0,terr=null,scoreInfo=null;
+const $=id=>document.getElementById(id);
+const P=i=>({x:PAD+(i%N)*CELL,y:PAD+Math.floor(i/N)*CELL});
+const rand=(a,b)=>a+Math.random()*(b-a);
+const human=()=>+$('side').value;
+const aiColor=()=>3-human();
+
+function setupBoard(n){
+  N=n;N2=n*n;CELL=(TOT-2*PAD)/(n-1);R0=Math.min(CELL*.47,24);
+  cv.width=cv.height=total*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
+  NB=[];DG=[];
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++){const nb=[],dg=[];
+    for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){const a=r+dr,b=c+dc;if(a>=0&&a<n&&b>=0&&b<n)nb.push(a*n+b)}
+    for(const[dr,dc]of[[-1,-1],[-1,1],[1,-1],[1,1]]){const a=r+dr,b=c+dc;if(a>=0&&a<n&&b>=0&&b<n)dg.push(a*n+b)}
+    NB.push(nb);DG.push(dg)}
+  const pts=n===9?[[2,2],[2,6],[6,2],[6,6],[4,4]]:n===13?[[3,3],[3,9],[9,3],[9,9],[6,6]]:[3,9,15].flatMap(r=>[3,9,15].map(c=>[r,c]));
+  STARS=pts.map(([r,c])=>r*n+c);
+}
+
+// ================= 桃花信笺：画法（同五子棋） =================
+const fibers=[];for(let i=0;i<700;i++)fibers.push([Math.random()*total,Math.random()*total,Math.random()*8+2,Math.random()*3,Math.random()*.06]);
+function drawBg(){
+  ctx.fillStyle='#fffaf8';ctx.fillRect(0,0,total,total);
+  ctx.lineWidth=.6;for(const[x,y,l,a,o]of fibers){ctx.strokeStyle=`rgba(200,140,150,${o})`;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(a)*l,y+Math.sin(a)*l);ctx.stroke()}
+  ctx.strokeStyle='rgba(170,100,120,.42)';ctx.lineWidth=.8;
+  for(let i=0;i<N;i++){const p=PAD+i*CELL;ctx.beginPath();ctx.moveTo(PAD,p);ctx.lineTo(total-PAD,p);ctx.stroke();ctx.beginPath();ctx.moveTo(p,PAD);ctx.lineTo(p,total-PAD);ctx.stroke()}
+  ctx.lineWidth=1.3;ctx.strokeRect(PAD,PAD,total-PAD*2,total-PAD*2);
+  const fs=Math.min(5.6,CELL*.17);for(const i of STARS){const{x,y}=P(i);petalFlower(x,y,fs)}
+}
+function blob(x,y,r,col,a){const b=ctx.createRadialGradient(x,y,0,x,y,r);b.addColorStop(0,col.replace('A',a));b.addColorStop(1,col.replace('A',0));ctx.fillStyle=b;ctx.fillRect(x-r,y-r,r*2,r*2)}
+function drawShadow(x,y,p,s,lift=0){const R=R0*s,t=p===1?'70,25,45':'150,110,130',off=1+lift*1.6,sp=1+lift*.35,a=1-lift*.55;
+  const sx=x+R*.18*off,sy=y+R*.26*off,sg=ctx.createRadialGradient(sx,sy,R*.3,sx,sy,R*1.25*sp);
+  sg.addColorStop(0,`rgba(${t},${.30*a})`);sg.addColorStop(.6,`rgba(${t},${.12*a})`);sg.addColorStop(1,`rgba(${t},0)`);ctx.fillStyle=sg;ctx.beginPath();ctx.ellipse(sx,sy,R*1.25*sp,R*1.1*sp,0,0,7);ctx.fill();
+  if(lift>.6)return;const cx=x+R*.05,cy=y+R*.12,cg=ctx.createRadialGradient(cx,cy,R*.75,cx,cy,R*1.04);cg.addColorStop(0,`rgba(${t},${.35*(1-lift/.6)})`);cg.addColorStop(1,`rgba(${t},0)`);ctx.fillStyle=cg;ctx.beginPath();ctx.arc(cx,cy,R*1.04,0,7);ctx.fill()}
+function drawStone(x,y,p,s){const R=R0*s;
+  ctx.save();ctx.beginPath();ctx.arc(x,y,R,0,7);ctx.clip();
+  const base=ctx.createRadialGradient(x-R*.35,y-R*.4,R*.1,x,y,R*1.05);
+  if(p===1){base.addColorStop(0,'#6d4a63');base.addColorStop(.45,'#3e2235');base.addColorStop(1,'#1c0c17')}
+  else{base.addColorStop(0,'#fffdfb');base.addColorStop(.5,'#f6eeee');base.addColorStop(.85,'#e6d9df');base.addColorStop(1,'#d3c4cf')}
+  ctx.fillStyle=base;ctx.fillRect(x-R,y-R,R*2,R*2);
+  ctx.globalCompositeOperation=p===1?'screen':'soft-light';const k=p===1?1:1.6;
+  blob(x+R*.35,y-R*.15,R*.75,'rgba(120,200,190,A)',.22*k);blob(x-R*.4,y+R*.35,R*.8,'rgba(230,140,190,A)',.25*k);blob(x+R*.25,y+R*.45,R*.6,'rgba(170,150,240,A)',.2*k);
+  ctx.globalCompositeOperation='source-over';
+  const rim=ctx.createRadialGradient(x-R*.1,y-R*.1,R*.7,x,y,R);rim.addColorStop(0,'rgba(255,240,245,0)');rim.addColorStop(1,p===1?'rgba(255,200,225,.22)':'rgba(255,255,255,.35)');ctx.fillStyle=rim;ctx.fillRect(x-R,y-R,R*2,R*2);
+  blob(x-R*.32,y-R*.38,R*.55,'rgba(255,255,255,A)',p===1?.35:.75);blob(x-R*.36,y-R*.42,R*.13,'rgba(255,255,255,A)',p===1?.85:1);
+  ctx.restore()}
+function petal(x,y,s,col){ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,y+s);ctx.bezierCurveTo(x-s*1.0,y+s*.25,x-s*.7,y-s*.85,x,y-s);ctx.bezierCurveTo(x+s*.7,y-s*.85,x+s*1.0,y+s*.25,x,y+s);ctx.fill()}
+function petalFlower(x,y,s){ctx.save();ctx.translate(x,y);
+  for(let k=0;k<5;k++){ctx.save();ctx.rotate(k*Math.PI*2/5);const g=ctx.createRadialGradient(0,0,s*.1,0,0,s*1.7);g.addColorStop(0,'#d9577f');g.addColorStop(.3,'#f08aa8');g.addColorStop(1,'#f9bccb');petal(0,-s*.9,s*.78,g);ctx.restore()}
+  ctx.strokeStyle='#c94d74';ctx.lineWidth=.45;ctx.fillStyle='#f5cf6a';for(let k=0;k<9;k++){const a=k*Math.PI*2/9+.2,l=s*(.42+.12*(k%2));ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(a)*l,Math.sin(a)*l);ctx.stroke();ctx.beginPath();ctx.arc(Math.cos(a)*l,Math.sin(a)*l,s*.07,0,7);ctx.fill()}
+  ctx.restore()}
+function spawnPetals(x,y,first,n=5){
+  if(first)for(let i=0;i<46;i++)parts.push({x:rand(-60,total),y:rand(-total*.6,-10),vx:rand(15,45),vy:rand(30,70),rot:rand(0,6),vr:rand(-2,2),life:rand(5,7),sz:rand(4,7),col:['#f6a5bb','#f18fab','#fbc4d2','#f7b3c5'][i%4]});
+  for(let i=0;i<n;i++)parts.push({x,y,vx:rand(-50,50),vy:rand(-60,-10),rot:rand(0,6),vr:rand(-3,3),life:rand(1.2,2),sz:rand(3,5),col:'#f18fab'})}
+
+// ================= 绘制循环（只在有动画时跑） =================
+let raf=null,lastT=0;
+function needAnim(t){return parts.length>0||fades.length>0||t<animUntil}
+function frame(t){
+  const dt=lastT?Math.min(.05,(t-lastT)/1000):0;lastT=t;
+  drawBg();
+  const marking=phase!=='play';
+  const drawn=[];
+  for(let i=0;i<N2;i++){if(!bd[i])continue;const{x,y}=P(i);let s=1,lift=0;const age=Math.max(0,(t-stoneT[i])/1000);
+    if(age<.28){const k=age/.28,e=1-Math.pow(1-k,3);s=1.1-.1*e;lift=1-e}
+    drawn.push([x,y,bd[i],s,lift,marking&&dead.has(i)])}
+  for(const[x,y,p,s,l,d]of drawn){if(!d)drawShadow(x,y,p,s,l)}
+  for(const[x,y,p,s,l,d]of drawn){if(d)ctx.globalAlpha=.42;drawStone(x,y-l*4,p,s);ctx.globalAlpha=1}
+  // 被提的子：淡出
+  for(const f of fades){const k=Math.max(0,Math.min(1,(t-f.t)/450)),{x,y}=P(f.i);ctx.globalAlpha=1-k;drawShadow(x,y,f.p,1-.12*k);drawStone(x,y,f.p,1-.12*k);ctx.globalAlpha=1}
+  fades=fades.filter(f=>t-f.t<450);
+  if(phase==='play'&&last!=null&&bd[last]){const{x,y}=P(last);ctx.fillStyle='#e8899e';ctx.beginPath();ctx.arc(x,y,Math.max(2,R0*.18),0,7);ctx.fill()}
+  if(terr&&marking){for(let i=0;i<N2;i++){if(!terr[i])continue;const{x,y}=P(i);ctx.beginPath();ctx.arc(x,y,R0*.3,0,7);
+    if(terr[i]===1){ctx.fillStyle='rgba(98,52,82,.55)';ctx.fill()}else{ctx.fillStyle='rgba(255,255,255,.92)';ctx.fill();ctx.strokeStyle='rgba(150,110,130,.75)';ctx.lineWidth=1;ctx.stroke()}}}
+  if(hover!=null&&hoverOK&&canPlay()&&!bd[hover]){const{x,y}=P(hover);ctx.globalAlpha=touchPending!=null?.6:.4;drawShadow(x,y,cur,.9);drawStone(x,y,cur,.9);ctx.globalAlpha=1;
+    if(touchPending!=null){ctx.strokeStyle='rgba(214,110,138,.75)';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.beginPath();ctx.arc(x,y,R0+4,0,7);ctx.stroke();ctx.setLineDash([])}}
+  for(const p of parts){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.rot+=p.vr*dt;p.vx+=Math.sin(t/500+p.y*.02)*.8;
+    ctx.globalAlpha=Math.max(0,Math.min(1,p.life));ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);petal(0,0,p.sz,p.col);ctx.restore();ctx.globalAlpha=1}
+  parts=parts.filter(p=>p.life>0);
+  raf=needAnim(t)?requestAnimationFrame(frame):null;if(!raf)lastT=0}
+function kick(){if(!raf)raf=requestAnimationFrame(frame)}
+
+// ================= 规则内核（扁平棋盘，人和电脑共用） =================
+let STAMP=new Int32Array(361),LSTAMP=new Int32Array(361),CH=new Int32Array(361),stampC=0,chainN=0;
+// 找出 i 所在的连块，存进 CH[0..chainN)，返回它的气数
+function chainF(b,i){const col=b[i];stampC++;chainN=0;CH[chainN++]=i;STAMP[i]=stampC;let libs=0;
+  for(let k=0;k<chainN;k++){const nb=NB[CH[k]];for(let q=0;q<nb.length;q++){const j=nb[q],v=b[j];
+    if(v===0){if(LSTAMP[j]!==stampC){LSTAMP[j]=stampC;libs++}}else if(v===col&&STAMP[j]!==stampC){STAMP[j]=stampC;CH[chainN++]=j}}}
+  return libs}
+// 落子并提子；返回提了几子，自杀返回 -1（并撤回）
+function playMove(b,i,col,out){
+  b[i]=col;const opp=3-col;let cap=0;const nb=NB[i];
+  for(let q=0;q<nb.length;q++){const j=nb[q];if(b[j]===opp&&chainF(b,j)===0){const n=chainN;for(let k=0;k<n;k++){const x=CH[k];b[x]=0;if(out)out.push(x)}cap+=n}}
+  if(cap===0&&chainF(b,i)===0){b[i]=0;return-1}
+  return cap}
+// 真实对局里的试走：禁自杀 + 劫（不能让棋盘回到两手之前的样子）
+function tryMove(i,col){
+  if(bd[i])return{err:'occupied'};
+  const b=Int8Array.from(bd),out=[],r=playMove(b,i,col,out);
+  if(r<0)return{err:'suicide'};
+  const str=b.join('');
+  if(snaps.length>=2&&str===snaps[snaps.length-2].str)return{err:'ko'};
+  return{b,caps:out,str}}
+// 数子：活子 + 只被一种颜色围住的空；dead 里的子视为已被提走
+function scoreBoard(b,deadSet){
+  let a=b;if(deadSet&&deadSet.size){a=Int8Array.from(b);deadSet.forEach(i=>a[i]=0)}
+  let bs=0,ws=0,bt=0,wt=0;const t=new Int8Array(N2),seen=new Uint8Array(N2);
+  for(let i=0;i<N2;i++){if(a[i]===1)bs++;else if(a[i]===2)ws++}
+  for(let i=0;i<N2;i++){if(a[i]!==0||seen[i])continue;const st=[i];seen[i]=1;let touch=0;
+    for(let k=0;k<st.length;k++){const nb=NB[st[k]];for(let q=0;q<nb.length;q++){const j=nb[q],v=a[j];if(v===0){if(!seen[j]){seen[j]=1;st.push(j)}}else touch|=v}}
+    if(touch===1){bt+=st.length;for(const x of st)t[x]=1}else if(touch===2){wt+=st.length;for(const x of st)t[x]=2}}
+  return{bs,ws,bt,wt,terr:t}}
+
+// ================= 状态 =================
+function snapNow(){return{b:Int8Array.from(bd),str:bd.join(''),cur,caps:caps.slice(),passes,last}}
+function restore(s){bd=Int8Array.from(s.b);cur=s.cur;caps=s.caps.slice();passes=s.passes;last=s.last;phase=passes>=2?'mark':'play'}
+function canPlay(){return phase==='play'&&!busy&&(mode==='pvp'||cur===human())}
+function flash(msg){flashMsg=msg;clearTimeout(flashTimer);flashTimer=setTimeout(()=>{flashMsg='';setStatus()},1800);setStatus()}
+function undoTarget(){const L=snaps.length;
+  if(mode==='pvp')return L-2;
+  const h=human();for(let i=L-2;i>=0;i--)if(snaps[i].cur===h)return i;return-1}
+function setStatus(){
+  const el=$('status');el.classList.toggle('win',phase==='done');
+  const dot=p=>`<span class="dot p${p}"></span> `;
+  if(flashMsg)el.innerHTML=dot(cur)+flashMsg;
+  else if(phase==='play'){const who=mode==='pvc'?(cur===human()?'轮到你（'+NAMES[cur-1]+'）':NAMES[cur-1]+'在想'):'轮到'+NAMES[cur-1];
+    el.innerHTML=dot(cur)+(touchPending!=null?'再点一次，落在这里':who)+(busy?'<span class="thinking"><i></i><i></i><i></i></span>':'')}
+  else if(phase==='mark')el.textContent='双方都停了一手。点一下棋块可标记死子（再点取消），然后确认数子';
+  else el.innerHTML=(result.winner?dot(result.winner):'')+result.text;
+  // 提子数 / 数子明细
+  const sc=(phase!=='play'&&scoreInfo)?scoreInfo:null;
+  $('info').innerHTML=sc?`墨莓 子 ${sc.bs} + 地 ${sc.bt} = <b>${sc.bs+sc.bt}</b>　·　珍珠 子 ${sc.ws} + 地 ${sc.wt} + 贴 ${KOMI_TXT[N]} = <b>${sc.ws+sc.wt+KOMI[N]}</b>`
+    :`提子　墨莓 ${caps[0]}　·　珍珠 ${caps[1]}`;
+  $('rule').textContent=`中国规则数子：活子 + 围住的空，白方（珍珠）贴 ${KOMI_TXT[N]}。禁止自杀，劫不能立刻提回。`;
+  const play=phase==='play',mine=canPlay();
+  $('pass').disabled=!mine;
+  $('resign').disabled=!mine;$('resign').textContent=resignArm?'再点确认认输':'认输';
+  $('undo').disabled=!(phase==='done'&&result&&result.resign)&&undoTarget()<0;
+  $('confirm').classList.toggle('hidden',phase!=='mark');$('resume').classList.toggle('hidden',phase!=='mark');
+  $('pass').classList.toggle('hidden',phase==='mark');$('resign').classList.toggle('hidden',phase==='mark');
+}
+function refreshScore(){scoreInfo=scoreBoard(bd,dead);terr=scoreInfo.terr}
+function reset(){
+  if(snaps.length>1){hush();sfx('pearlGather',.8,1)}
+  gid++;busy=false;phase='play';cur=1;caps=[0,0];passes=0;last=null;dead=new Set();result=null;terr=null;scoreInfo=null;
+  bd=new Int8Array(N2);stoneT=new Float64Array(N2);fades=[];parts=[];hover=null;touchPending=null;resignArm=0;flashMsg='';
+  snaps=[snapNow()];
+  setStatus();kick();
+  afterMove()}
+function afterMove(){setStatus();kick();if(phase==='play'&&mode==='pvc'&&cur===aiColor())thinkThen()}
+
+function commit(i,res){
+  const now=performance.now(),col=cur;touchPending=null;hover=null;resignArm=0;
+  for(const x of res.caps)fades.push({i:x,p:3-col,t:now+160});
+  bd=res.b;stoneT[i]=now;caps[col-1]+=res.caps.length;last=i;passes=0;cur=3-col;snaps.push(snapNow());
+  animUntil=now+500;
+  setTimeout(()=>clack(col),150);
+  if(res.caps.length){setTimeout(()=>sfx('pearlPick',.65,1.0+Math.random()*.05),300);
+    // 被提的子化成几瓣桃花
+    for(const x of res.caps){const p=P(x);setTimeout(()=>{spawnPetals(p.x,p.y,false,2);kick()},200)}}
+  afterMove()}
+function doPass(){
+  touchPending=null;resignArm=0;passes++;last=null;cur=3-cur;snaps.push(snapNow());
+  if(passes>=2){phase='mark';dead=new Set();refreshScore()}
+  afterMove()}
+function humanMove(i){
+  const res=tryMove(i,cur);
+  if(res.err==='suicide'){flash('这里没有气，是自杀，不能下');return}
+  if(res.err==='ko'){flash('打劫：不能立刻提回，先去别处下一手');return}
+  if(res.err)return;
+  commit(i,res)}
+
+function toGrid(e){const rc=cv.getBoundingClientRect(),mx=(e.clientX-rc.left)*(total/rc.width),my=(e.clientY-rc.top)*(total/rc.height),c=Math.round((mx-PAD)/CELL),r=Math.round((my-PAD)/CELL);return r<0||r>=N||c<0||c>=N?null:r*N+c}
+function setHover(g){if(g===hover)return;hover=g;hoverOK=g!=null&&!bd[g]&&canPlay()&&!tryMove(g,cur).err;kick()}
+cv.addEventListener('mousemove',e=>setHover(toGrid(e)));
+cv.addEventListener('mouseleave',()=>{hover=null;kick()});
+cv.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;const g=toGrid(e);if(g==null)return;
+  if(phase==='mark'){if(!bd[g])return;chainF(bd,g);const grp=Array.from(CH.subarray(0,chainN)),on=!dead.has(g);grp.forEach(x=>on?dead.add(x):dead.delete(x));refreshScore();setStatus();kick();return}
+  if(!canPlay()||bd[g])return;
+  if(e.pointerType!=='mouse'&&touchPending!==g){if(tryMove(g,cur).err){humanMove(g);return}touchPending=g;hover=g;hoverOK=true;setStatus();kick();return}
+  humanMove(g)});
+
+// ================= 声音（同五子棋的珍珠声，不加胜负声） =================
+let soundOn=true;try{soundOn=localStorage.getItem('gomoku-sound')!=='off'}catch(e){}
+const POOL={},unlocked={v:false};
+function pool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
+function sfx(f,vol,rate){if(!soundOn)return;const ps=pool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
+function clack(p){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),.8,(p===1?.95:1.04)+(Math.random()-.5)*.04)}
+function hush(){}
+function syncSound(){$('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}
+
+// ================= 悔棋 / 认输 / 数子 =================
+function undo(){
+  gid++;busy=false;
+  if(phase==='done'&&result&&result.resign){phase='play';result=null}
+  else{const t=undoTarget();if(t<0)return;snaps.length=t+1;restore(snaps[t]);result=null;
+    stoneT=new Float64Array(N2);fades=[];parts=[];dead=new Set();terr=null;scoreInfo=null}
+  touchPending=null;hover=null;resignArm=0;flashMsg='';sfx('pearlPick',.7,1);afterMove()}
+function resign(){
+  if(!resignArm){resignArm=setTimeout(()=>{resignArm=0;setStatus()},3000);setStatus();return}
+  clearTimeout(resignArm);resignArm=0;gid++;busy=false;
+  const w=3-cur;phase='done';terr=null;scoreInfo=null;
+  result={resign:true,winner:w,text:mode==='pvc'?(w===human()?'电脑认输，你赢啦！':'你认输了，再来一局吧'):`${NAMES[cur-1]}认输，${NAMES[w-1]}胜`};
+  setStatus();kick()}
+function confirmScore(){
+  refreshScore();const s=scoreInfo,B=s.bs+s.bt,W=s.ws+s.wt+KOMI[N],d=B-W;
+  let w=0,text;
+  if(d===0)text='平局';
+  else{w=d>0?1:2;const n=Math.abs(d),ns=n%1?n:n;
+    const lead=mode==='pvc'?(w===human()?'你赢啦！':NAMES[w-1]+'赢了，再来一局吧'):NAMES[w-1]+'胜';
+    text=`${lead}（${ns} 点）`}
+  phase='done';result={winner:w,text};
+  setStatus();
+  if(w){spawnPetals(0,0,true,0)}
+  kick()}
+
+// ================= 电脑：规则启发 + 蒙特卡洛 =================
+function isEye(b,i,col){const nb=NB[i];for(let q=0;q<nb.length;q++)if(b[nb[q]]!==col)return false;
+  const dg=DG[i];let bad=0;for(let q=0;q<dg.length;q++)if(b[dg[q]]!==col)bad++;return dg.length<4?bad===0:bad<=1}
+function playout(b0,col){
+  const b=Int8Array.from(b0);let ps=0,n=0;const lim=N2*2;
+  while(ps<2&&n<lim){let moved=false;const s=(Math.random()*N2)|0;
+    for(let k=0;k<N2;k++){let i=s+k;if(i>=N2)i-=N2;if(b[i]!==0||isEye(b,i,col))continue;if(playMove(b,i,col,null)>=0){moved=true;break}}
+    ps=moved?0:ps+1;col=3-col;n++}
+  const sc=scoreBoard(b,null);return sc.bs+sc.bt-sc.ws-sc.wt}
+function thinkThen(){busy=true;setStatus();const id=gid;setTimeout(()=>{if(id===gid)aiThink(id)},220)}
+function aiThink(id){
+  const ac=aiColor(),oc=3-ac;
+  let stones=0;for(let i=0;i<N2;i++)if(bd[i])stones++;
+  const cands=[];
+  for(let i=0;i<N2;i++){
+    if(bd[i])continue;
+    const res=tryMove(i,ac);if(res.err)continue;
+    const cap=res.caps.length;
+    if(cap===0&&isEye(bd,i,ac))continue;
+    let h=cap*6;
+    const libs=chainF(res.b,i);
+    if(libs===1)h+=cap?-2:-10;else if(libs>=3)h+=1;
+    const nb=NB[i];let own=0;
+    for(let q=0;q<nb.length;q++){const j=nb[q];
+      if(bd[j]===ac){own++;if(chainF(bd,j)===1&&libs>=2)h+=8}   // 救自己被打吃的子
+      else if(res.b[j]===oc&&chainF(res.b,j)===1)h+=3}          // 打吃对方
+    if(own===nb.length)h-=3;                                       // 别往自己地里填
+    const r=Math.floor(i/N),c=i%N,d=Math.min(r,c,N-1-r,N-1-c);
+    h+=d===0?-3:d===1?-.5:.5;
+    if(stones<4)h-=(Math.abs(r-(N-1)/2)+Math.abs(c-(N-1)/2))*.4;
+    else{let near=false;for(let dr=-2;dr<=2&&!near;dr++)for(let dc=-2;dc<=2;dc++){const a=r+dr,b2=c+dc;if(a>=0&&a<N&&b2>=0&&b2<N&&bd[a*N+b2]){near=true;break}}if(!near)h-=2}
+    h+=Math.random()*.8;
+    cands.push({i,res,h,wins:0,n:0})}
+  if(!cands.length){busy=false;doPass();return}
+  cands.sort((a,b)=>b.h-a.h);
+  const top=cands.slice(0,14),t0=performance.now(),BUDGET=520;
+  function step(){
+    if(id!==gid)return;
+    const ts=performance.now();
+    do{for(const c of top){const d=playout(c.res.b,oc)-KOMI[N];const win=ac===1?d>0:d<0;c.n++;if(win)c.wins++}}
+    while(performance.now()-ts<40&&performance.now()-t0<BUDGET);
+    if(performance.now()-t0<BUDGET)setTimeout(step,0);else finish()}
+  function finish(){
+    if(id!==gid)return;
+    let best=top[0],bs=-1e9;
+    for(const c of top){const s=(c.n?c.wins/c.n:.5)*100+c.h*1.5;c.wr=c.n?c.wins/c.n:.5;if(s>bs){bs=s;best=c}}
+    busy=false;
+    if(passes===1&&best.wr>.55){doPass();return}
+    commit(best.i,best.res)}
+  step()}
+
+// ================= 控件 =================
+function syncModeBtns(){document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on',x.dataset.m===mode));$('pvcOpts').classList.toggle('hidden',mode!=='pvc');
+  document.querySelector('#modeSeg [data-m=pvc]').classList.toggle('off',N!==9)}
+$('modeSeg').onclick=e=>{const b=e.target.closest('button');if(!b||b.dataset.m===mode)return;
+  if(b.dataset.m==='pvc'&&N!==9){flash('和电脑下目前只有 9 路');return}
+  mode=b.dataset.m;syncModeBtns();reset()};
+$('sizeSeg').onclick=e=>{const b=e.target.closest('button');if(!b||+b.dataset.n===N)return;
+  document.querySelectorAll('#sizeSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  setupBoard(+b.dataset.n);if(N!==9&&mode==='pvc')mode='pvp';syncModeBtns();reset();
+  if(N!==9)flash('和电脑下目前只有 9 路，已切换为两人同下')};
+$('side').onchange=reset;
+$('restart').onclick=reset;
+$('undo').onclick=undo;
+$('pass').onclick=()=>{if(canPlay())doPass()};
+$('resign').onclick=()=>{if(canPlay())resign()};
+$('confirm').onclick=confirmScore;
+$('resume').onclick=()=>{passes=0;snaps[snaps.length-1]=snapNow();phase='play';dead=new Set();terr=null;scoreInfo=null;afterMove()};
+$('sound').onclick=()=>{soundOn=!soundOn;try{localStorage.setItem('gomoku-sound',soundOn?'on':'off')}catch(e){}syncSound();if(soundOn)clack(1)};
+syncSound();
+setupBoard(9);
+syncModeBtns();
+reset();
+</script>
+<script>
+(function(){const m=document.getElementById('rulesMask'),open=()=>m.classList.add('on'),close=()=>m.classList.remove('on');
+  document.getElementById('helpBtn').addEventListener('click',open);m.addEventListener('click',e=>{if(e.target===m||e.target.classList.contains('close'))close()});
+  addEventListener('keydown',e=>{if(e.key==='Escape')close()})})();
+</script>
+</body>
+</html>

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>华容道 · 桃源弈</title>
+<meta name="description" content="一盘桃花信笺风格的华容道，把曹操从底部的出口送出去。">
+<meta name="theme-color" content="#fbf1f0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='12' y='12' width='40' height='40' rx='10' fill='%23f0a0b4'/%3E%3Crect x='17' y='17' width='30' height='30' rx='7' fill='none' stroke='%23fff' stroke-opacity='.6' stroke-width='2'/%3E%3Ccircle cx='32' cy='32' r='4' fill='%23f5cf6a'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#fbf1f0;--ink:#8a4a5c;--soft:#b98593;--line:#e6c3ca;--btn:#8a4a5c;--btnInk:#fbf1f0;--rouge:#c0405a;--mx:14px;--mt:14px;--mb:40px}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:36px 16px 40px;overflow-x:hidden;
+  background:var(--bg);color:var(--ink);font-family:'Noto Serif SC','Songti SC',serif;
+  background-image:radial-gradient(ellipse at 15% 10%,rgba(240,190,200,.35),transparent 50%),radial-gradient(ellipse at 90% 90%,rgba(220,200,230,.35),transparent 50%);
+  animation:fadein .9s ease both}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.title{font-size:36px;font-weight:300;letter-spacing:16px;text-indent:16px;user-select:none;line-height:1.2;text-align:center}
+.sub{font-size:13px;letter-spacing:3px;color:var(--soft);margin:10px 0 22px;text-align:center}
+.controls{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:14px}
+select{font-family:inherit;font-size:13px;letter-spacing:1px;color:var(--ink);background:rgba(255,255,255,.7);border:1.5px solid var(--line);padding:7px 32px 7px 14px;cursor:pointer;appearance:none;-webkit-appearance:none;border-radius:0;max-width:calc(100vw - 32px);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23b98593'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+select:focus{outline:none;border-color:var(--ink)}
+.best{font-size:12px;letter-spacing:2px;color:var(--soft);user-select:none;min-height:18px}
+.status{min-height:28px;font-size:15px;letter-spacing:2px;color:var(--soft);margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;user-select:none;text-align:center;max-width:100%}
+.status.win{color:var(--ink);font-size:17px}
+@media(max-width:440px){.status{font-size:13.5px;letter-spacing:1px}.status.win{font-size:15px}}
+.dot{width:16px;height:16px;border-radius:5px;display:inline-block;flex:none;box-shadow:0 0 0 1px rgba(190,70,100,.12),inset 0 1px 1px rgba(255,255,255,.8);background:linear-gradient(150deg,#fbc9d2,#e98ba2)}
+.frame{padding:12px;background:#fffaf8;border-radius:4px;box-shadow:0 1px 0 #e6c3ca,0 10px 34px rgba(140,70,90,.12)}
+
+/* ---------- 棋盘 ---------- */
+#board{--u:min(calc((100vw - 120px) / 4),94px);position:relative;width:calc(var(--u)*4 + var(--mx)*2);height:calc(var(--u)*5 + var(--mt) + var(--mb));
+  touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;border-radius:2px}
+#bgc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.blk{--g:3px;--j1:#fff;--j2:#eee;--j3:#ddd;--deep:150,110,130;--sh:150,110,130;--tc:#8a4a5c;--ring:0 0 0 0 transparent;
+  position:absolute;left:0;top:0;z-index:2;
+  width:calc(var(--w)*var(--u) - var(--g)*2);height:calc(var(--h)*var(--u) - var(--g)*2);
+  transform:translate(calc(var(--mx) + var(--g) + var(--c)*var(--u) + var(--dx,0px)),calc(var(--mt) + var(--g) + var(--r)*var(--u) + var(--dy,0px)));
+  border-radius:calc(var(--u)*.17);display:flex;align-items:center;justify-content:center;cursor:grab;
+  transition:transform .24s cubic-bezier(.25,.9,.3,1),opacity .5s;will-change:transform;
+  background:
+    radial-gradient(120% 85% at 20% 8%,rgba(255,255,255,.8),rgba(255,255,255,0) 58%),
+    radial-gradient(90% 70% at 88% 100%,rgba(var(--deep),.34),rgba(var(--deep),0) 62%),
+    linear-gradient(150deg,var(--j1),var(--j2) 55%,var(--j3));
+  box-shadow:inset 0 1.5px 1px rgba(255,255,255,.9),inset 0 -9px 15px rgba(var(--deep),.16),inset 0 0 0 1px rgba(255,255,255,.4),
+    var(--ring),0 8px 14px -5px rgba(var(--sh),.38),0 1px 3px rgba(var(--sh),.22)}
+.blk::before{content:"";position:absolute;inset:calc(var(--u)*.07);border-radius:calc(var(--u)*.12);pointer-events:none;
+  border:1px solid rgba(255,255,255,.62);box-shadow:inset 0 0 0 1px rgba(var(--deep),.07)}
+.blk::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;mix-blend-mode:soft-light;
+  background:radial-gradient(42% 22% at 72% 28%,rgba(255,255,255,.6),transparent 70%),radial-gradient(36% 16% at 24% 76%,rgba(255,255,255,.4),transparent 70%),radial-gradient(60% 10% at 50% 52%,rgba(var(--deep),.18),transparent 75%)}
+.blk.drag{transition:none;cursor:grabbing;z-index:4}
+.blk.sel{--ring:0 0 0 2px rgba(226,112,142,.85),0 0 0 6px rgba(244,170,190,.28)}
+.blk.out{transition:transform .95s cubic-bezier(.5,0,.8,.6),opacity .6s .35s;opacity:0;pointer-events:none}
+.nm{position:relative;z-index:1;color:var(--tc);font-weight:600;line-height:1;white-space:nowrap;pointer-events:none;
+  text-shadow:0 1px 0 rgba(255,255,255,.75),0 -.5px 0 rgba(var(--deep),.25)}
+.k-cao{--j1:#fcd3da;--j2:#f2a6b9;--j3:#e27d99;--deep:190,60,100;--sh:190,70,105;--tc:#8c1f42;--g:3px}
+.k-cao .nm{font-size:calc(var(--u)*.6);letter-spacing:.16em;text-indent:.16em;font-weight:600}
+.k-guan{--j1:#f0f9f5;--j2:#cfe9df;--j3:#a8d1c2;--deep:70,140,120;--sh:80,140,122;--tc:#2c6757}
+.k-guan .nm{font-size:calc(var(--u)*.42);letter-spacing:.3em;text-indent:.3em}
+.k-gen{--j1:#fffaf3;--j2:#f8ebd9;--j3:#ebd6bb;--deep:175,130,80;--sh:165,120,90;--tc:#85523f}
+.k-gen .nm{font-size:calc(var(--u)*.4)}
+.k-gen.v .nm{writing-mode:vertical-rl;letter-spacing:.28em;text-indent:.28em}
+.k-gen.hz .nm{letter-spacing:.3em;text-indent:.3em}
+.k-pawn{--g:7px;--j1:#fffefd;--j2:#f7eef0;--j3:#e0d3dc;--deep:150,110,150;--sh:150,110,135;--tc:#b8324f;border-radius:calc(var(--u)*.2)}
+.k-pawn::after{background:radial-gradient(60% 50% at 78% 24%,rgba(120,200,190,.5),transparent 70%),radial-gradient(60% 50% at 20% 80%,rgba(230,140,190,.5),transparent 70%),radial-gradient(40% 40% at 70% 78%,rgba(170,150,240,.45),transparent 70%)}
+.k-pawn::before{inset:calc(var(--u)*.05)}
+.k-pawn .nm{font-size:calc(var(--u)*.3)}
+.hint{position:absolute;left:0;top:0;width:calc(var(--u)*.3);height:calc(var(--u)*.3);z-index:3;pointer-events:none;
+  transform:translate(calc(var(--mx) + (var(--c) + .5)*var(--u) - var(--u)*.15),calc(var(--mt) + (var(--r) + .5)*var(--u) - var(--u)*.15));animation:hintin .3s ease both}
+.hint svg{width:100%;height:100%;display:block;filter:drop-shadow(0 1px 2px rgba(200,80,110,.3))}
+@keyframes hintin{from{opacity:0;scale:.4}to{opacity:.95;scale:1}}
+#fx{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:40}
+
+.actions{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;justify-content:center}
+.restart{font-family:inherit;font-size:14px;letter-spacing:4px;padding:9px 26px;border:1.5px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);cursor:pointer;transition:background .2s,color .2s}
+@media(max-width:440px){.restart{padding:8px 14px;letter-spacing:2px;font-size:13px}}
+.restart:disabled{opacity:.35;cursor:default}
+.restart:not(:disabled):hover{background:var(--btn);color:var(--btnInk);border-color:var(--btn)}
+.footer{margin-top:34px;font-size:11px;letter-spacing:4px;color:var(--line);user-select:none}
+.hidden{display:none!important}
+.back{position:absolute;top:14px;left:16px;z-index:5;font-size:13px;letter-spacing:3px;color:var(--soft);text-decoration:none;padding:6px 10px 6px 4px;font-family:inherit}
+.back:hover{color:var(--ink)}
+.help{position:absolute;top:12px;right:16px;z-index:5;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);font-family:inherit;font-size:16px;line-height:1;cursor:pointer;transition:background .2s,color .2s}
+.help:hover{background:var(--ink);color:#fbf1f0;border-color:var(--ink)}
+.rules-mask{position:fixed;inset:0;background:rgba(120,60,80,.18);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50;opacity:0;pointer-events:none;transition:opacity .25s}
+.rules-mask.on{opacity:1;pointer-events:auto}
+.rules{background:#fffaf8;max-width:440px;width:100%;max-height:84vh;overflow:auto;padding:26px 22px 20px;box-shadow:0 20px 50px rgba(140,70,90,.22);border-radius:4px;color:var(--ink);transform:translateY(10px);transition:transform .25s;text-align:left}
+.rules-mask.on .rules{transform:none}
+.rules h3{font-weight:400;font-size:20px;letter-spacing:8px;text-indent:8px;text-align:center;margin-bottom:6px}
+.rules h4{font-weight:600;font-size:14px;letter-spacing:2px;margin:16px 0 4px}
+.rules p,.rules li{font-size:13.5px;line-height:1.85;letter-spacing:.5px;color:#7a4a58}
+.rules ul{padding-left:1.2em}.rules li{margin:2px 0}.rules b{font-weight:600;color:var(--ink)}
+.rules .close{display:block;margin:20px auto 0;font-family:inherit;font-size:14px;letter-spacing:4px;padding:8px 30px;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+</style>
+</head>
+<body>
+<a class="back" href="./">‹ 桃源弈</a>
+<button class="help" id="helpBtn" aria-label="规则说明">?</button>
+<div class="rules-mask" id="rulesMask" role="dialog" aria-modal="true" aria-label="华容道怎么玩"><div class="rules"><h3>华容道怎么玩</h3>
+<p>曹操被困在一座小营里，你一个人帮他杀出一条路：把曹操那块大玉牌送到棋盘最下面的出口。</p>
+<h4>棋盘和玉牌</h4><ul><li>棋盘是 4 列 × 5 行，底边中间的两格是出口，只有曹操走得出去。</li>
+<li>玉牌有：<b>曹操</b>（2×2 的大块）、<b>关羽</b>（2×1 横着的一块）、<b>张飞、赵云、马超、黄忠</b>（1×2，多数竖着，有的关卡里是横着的），还有四个小小的<b>兵</b>（1×1）。棋盘上总共留着两个空格。</li></ul>
+<h4>怎么挪</h4><ul><li>每次把一块玉牌滑进旁边的空格，<b>不能拿起来，也不能转</b>。</li>
+<li>用手指或鼠标<b>按住玉牌往空格的方向拖</b>，松手就滑过去；两个空格排成一条线时，可以一口气滑两格。</li>
+<li>也可以<b>先点一下玉牌</b>，再点亮着小桃花的空格。</li>
+<li><b>算步数</b>：连着推同一块玉牌，不管推几格、拐几个弯，都只算一步；换一块再推，才多一步。</li></ul>
+<h4>怎么赢</h4><ul><li>把曹操滑到最底下、正对出口的位置，他就出营了。</li>
+<li>每一关旁边写着「最少 N 步」，是电脑算出来的最短走法。走得比它多也算通关，只是想拿最好成绩，就再来一次。</li>
+<li>点「撤销一步」可以退回上一次滑动，点「重来本关」整局重新摆。</li></ul>
+<h4>小窍门</h4><ul><li>不要一上来就想着推曹操，先想办法让两个空格靠到一起，才有地方周转。</li><li>卡住时，先把空格挪到曹操前面去。</li></ul><button class="close">知道啦</button></div></div>
+<div class="title">桃 · 华容道</div>
+<div class="sub">送君出关，一步一花</div>
+
+<div class="controls">
+  <select id="level" aria-label="选择关卡"></select>
+  <div class="best" id="best"></div>
+</div>
+
+<div class="status" id="status"></div>
+<div class="frame"><div id="board" aria-label="华容道棋盘"><canvas id="bgc"></canvas></div></div>
+<div class="actions"><button class="restart" id="undo">撤销一步</button><button class="restart" id="restart">重来本关</button><button class="restart hidden" id="next">下一关</button><button class="restart" id="sound">声音 · 开</button></div>
+<div class="footer">滑 · 挪 · 出 · 关</div>
+<canvas id="fx"></canvas>
+
+<script>
+// ================= 关卡 =================
+// 每行 4 个字符：C 曹操、G 关羽、a 张飞、b 赵云、c 马超、d 黄忠（同字母连在一起是一块）、1-4 兵、. 空格
+// min 是用广度优先搜索算出来的最少步数（连着推同一块只算一步）
+const NAMES={C:'曹操',G:'关羽',a:'张飞',b:'赵云',c:'马超',d:'黄忠'};
+const LEVELS=[
+  {id:'jinzai',name:'近在咫尺',min:1,rows:['aGGb','a12b','cCCd','cCCd','3..4']},
+  {id:'jiangyong',name:'春水绕营',min:13,rows:['1GG2','aCCb','aCCb','c34d','c..d']},
+  {id:'qitou',name:'桃溪暗渡',min:52,rows:['CCab','CCab','cd12','cd34','..GG']},
+  {id:'bingfen',name:'三径寻春',min:62,rows:['aCCb','aCCb','12cd','GGcd','3..4']},
+  {id:'zuoyou',name:'左右夹花',min:69,rows:['aCCb','aCCb','c12d','c..d','3GG4']},
+  {id:'cengceng',name:'重门深锁',min:70,rows:['aCCb','aCCb','1GG2','c34d','c..d']},
+  {id:'zhihui',name:'风起云移',min:73,rows:['aCC1','aCC2','bGGc','bddc','3..4']},
+  {id:'jiezu',name:'一步之遥',min:77,rows:['aCCb','aCCb','GG12','c34d','c..d']},
+  {id:'hengdao',name:'横刀立马',min:81,rows:['aCCb','aCCb','cGGd','c12d','3..4']},
+  {id:'shuixie',name:'四面桃林',min:103,rows:['aCCb','aCCb','ccdd','1GG2','3..4']}
+];
+const ROWS=5,COLS=4,MX=14,MT=14;
+const $=x=>document.getElementById(x);
+const rand=(a,b)=>a+Math.random()*(b-a);
+const board=$('board');
+
+// ================= 记录（通过与否、最好成绩） =================
+let prog={};try{prog=JSON.parse(localStorage.getItem('huarongdao-progress')||'{}')||{}}catch(e){prog={}}
+function saveProg(){try{localStorage.setItem('huarongdao-progress',JSON.stringify(prog))}catch(e){}}
+function fillSelect(){const s=$('level'),keep=s.value;s.innerHTML='';
+  LEVELS.forEach((L,i)=>{const o=document.createElement('option');o.value=i;o.textContent=`${i+1} · ${L.name} · 最少 ${L.min} 步`+(prog[L.id]?' ✓':'');s.appendChild(o)});
+  s.value=keep||String(li)}
+
+// ================= 状态 =================
+let li=0,pieces=[],hist=[],steps=0,lastId=null,won=false,sel=null,drag=null,gid=0;
+try{const k=+localStorage.getItem('huarongdao-level');if(k>=0&&k<LEVELS.length)li=k}catch(e){}
+const unit=()=>(board.offsetWidth-MX*2)/COLS;
+
+function build(){
+  board.querySelectorAll('.blk,.hint').forEach(n=>n.remove());
+  pieces=[];hist=[];steps=0;lastId=null;won=false;sel=null;drag=null;gid++;parts=[];
+  const L=LEVELS[li],seen={};
+  L.rows.forEach((row,r)=>[...row].forEach((ch,c)=>{if(ch==='.')return;(seen[ch]=seen[ch]||[]).push([r,c])}));
+  for(const ch of Object.keys(seen)){const cs=seen[ch],r=Math.min(...cs.map(x=>x[0])),c=Math.min(...cs.map(x=>x[1])),h=Math.max(...cs.map(x=>x[0]))-r+1,w=Math.max(...cs.map(x=>x[1]))-c+1;
+    const kind=ch==='C'?'cao':ch==='G'?'guan':/\d/.test(ch)?'pawn':'gen';
+    const el=document.createElement('div');el.className='blk k-'+kind+(kind==='gen'?(h>w?' v':' hz'):'');
+    el.innerHTML=`<span class="nm">${kind==='pawn'?'兵':NAMES[ch]}</span>`;
+    el.style.setProperty('--w',w);el.style.setProperty('--h',h);
+    board.appendChild(el);
+    const p={id:ch,kind,r,c,w,h,el};el.dataset.id=ch;pieces.push(p);place(p)}
+  setStatus();syncUI()}
+function place(p){p.el.style.setProperty('--r',p.r);p.el.style.setProperty('--c',p.c);p.el.style.removeProperty('--dx');p.el.style.removeProperty('--dy')}
+function grid(){const g=Array.from({length:ROWS},()=>Array(COLS).fill(null));for(const p of pieces)for(let r=0;r<p.h;r++)for(let c=0;c<p.w;c++)g[p.r+r][p.c+c]=p.id;return g}
+// 这一块朝 (dr,dc) 方向最多能滑几格
+function freeRun(p,dr,dc,g=grid()){let n=0;
+  for(;;){const k=n+1;let ok=true;
+    for(let r=0;r<p.h&&ok;r++)for(let c=0;c<p.w&&ok;c++){const rr=p.r+r+dr*k,cc=p.c+c+dc*k;if(rr<0||rr>=ROWS||cc<0||cc>=COLS||(g[rr][cc]&&g[rr][cc]!==p.id))ok=false}
+    if(!ok)return n;n=k}}
+const DIRS=[[1,0],[-1,0],[0,1],[0,-1]];
+function movesOf(p){const g=grid(),out=[];for(const[dr,dc]of DIRS){const f=freeRun(p,dr,dc,g);for(let n=1;n<=f;n++)out.push({dr,dc,n})}return out}
+
+// ================= 走一步 =================
+function slide(p,dr,dc,n){
+  hist.push({id:p.id,r:p.r,c:p.c,steps,lastId});
+  p.r+=dr*n;p.c+=dc*n;if(lastId!==p.id)steps++;lastId=p.id;
+  sel=null;clearHints();place(p);
+  {const g0=gid;setTimeout(()=>{if(g0===gid)clack()},150)}
+  checkWin();setStatus();syncUI()}
+function checkWin(){const cao=pieces.find(p=>p.id==='C');
+  if(cao.r===3&&cao.c===1&&!won){won=true;const L=LEVELS[li];
+    const first=!prog[L.id],better=prog[L.id]&&steps<prog[L.id];
+    if(first||better){prog[L.id]=steps;saveProg();fillSelect()}
+    const g0=gid;
+    setTimeout(()=>{if(g0!==gid||!won)return;cao.r=5;cao.el.classList.add('out');place(cao);
+      [0,1,2,3,4].forEach(i=>setTimeout(()=>{if(g0===gid&&won){spawnPetals(i===0);kickFx()}},i*220));
+      [0,1,2].forEach(i=>setTimeout(()=>{if(g0===gid&&won)sfx('pearlDrop'+(2+i),.7,.98+i*.07)},i*170))},330)}}
+function undo(){if(!hist.length)return;
+  const h=hist.pop(),p=pieces.find(x=>x.id===h.id);
+  p.r=h.r;p.c=h.c;steps=h.steps;lastId=h.lastId;
+  if(won){won=false;const cao=pieces.find(x=>x.id==='C');cao.el.classList.remove('out');parts=[]}
+  gid++;sel=null;clearHints();for(const q of pieces){q.el.classList.remove('out');place(q)}
+  sfx('pearlPick',.7,1);setStatus();syncUI()}
+
+// ================= 状态栏与按钮 =================
+function setStatus(){const el=$('status'),L=LEVELS[li];el.classList.toggle('win',won);
+  if(won){el.innerHTML=`<span class="dot"></span> 曹操出营啦！用了 ${steps} 步（最少 ${L.min} 步）`+(steps===L.min?' · 一步不多':'')}
+  else el.innerHTML=`<span class="dot"></span> ${steps===0?'把曹操送到下面的出口':'已走 '+steps+' 步'} · 最少 ${L.min} 步`;
+  const b=prog[L.id];$('best').textContent=b?`已通关 · 最好成绩 ${b} 步`:'还没有通关'}
+function syncUI(){$('undo').disabled=!hist.length;$('next').classList.toggle('hidden',!(won&&li<LEVELS.length-1));$('level').value=String(li)}
+
+// ================= 选中与提示 =================
+const FLOWER=(()=>{let s='<svg viewBox="-12 -12 24 24" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="pg" cx="0" cy="0" r="12" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d9577f"/><stop offset=".3" stop-color="#f08aa8"/><stop offset="1" stop-color="#f9bccb"/></radialGradient></defs>';
+  for(let k=0;k<5;k++)s+=`<path transform="rotate(${k*72})" fill="url(#pg)" d="M0 -2 C-7 -3 -6 -11 0 -11.5 C6 -11 7 -3 0 -2 Z"/>`;
+  return s+'<circle r="2" fill="#f5cf6a"/></svg>'})();
+let hintMoves=[];
+function clearHints(){board.querySelectorAll('.hint').forEach(n=>n.remove());board.querySelectorAll('.blk.sel').forEach(n=>n.classList.remove('sel'));hintMoves=[]}
+function select(p){clearHints();sel=p;if(!p)return;p.el.classList.add('sel');
+  hintMoves=movesOf(p).map(m=>({...m,cells:footprint(p,m.dr*m.n,m.dc*m.n)}));
+  const shown=new Set(),g=grid();
+  for(const m of hintMoves)for(const[r,c]of m.cells){const key=r*10+c;if(g[r][c]||shown.has(key))continue;shown.add(key);
+    const h=document.createElement('div');h.className='hint';h.style.setProperty('--r',r);h.style.setProperty('--c',c);h.innerHTML=FLOWER;board.appendChild(h)}
+  sfx('pearlPick',.4,1.1)}
+function footprint(p,dr,dc){const o=[];for(let r=0;r<p.h;r++)for(let c=0;c<p.w;c++)o.push([p.r+r+dr,p.c+c+dc]);return o}
+
+// ================= 手指 / 鼠标 =================
+function cellAt(e){const rc=board.getBoundingClientRect(),u=unit(),c=Math.floor((e.clientX-rc.left-MX)/u),r=Math.floor((e.clientY-rc.top-MT)/u);return r<0||r>=ROWS||c<0||c>=COLS?null:[r,c]}
+board.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;if(won)return;
+  const el=e.target.closest('.blk'),p=el&&pieces.find(x=>x.el===el);
+  drag={p,x0:e.clientX,y0:e.clientY,axis:null,moved:false,dx:0,dy:0,n:0,id:e.pointerId,cell:cellAt(e)};
+  try{board.setPointerCapture(e.pointerId)}catch(_){}});
+board.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id||!drag.p)return;
+  const dx=e.clientX-drag.x0,dy=e.clientY-drag.y0,u=unit();
+  if(!drag.axis){if(Math.hypot(dx,dy)<7)return;drag.axis=Math.abs(dx)>=Math.abs(dy)?'x':'y';drag.moved=true;
+    clearHints();sel=null;drag.p.el.classList.add('drag');sfx('pearlPick',.35,1.1)}
+  const d=drag.axis==='x'?dx:dy,sg=d<0?-1:1,free=freeRun(drag.p,drag.axis==='y'?sg:0,drag.axis==='x'?sg:0);
+  let vis=Math.abs(d);vis=free>0?Math.min(vis,free*u):Math.min(vis*.25,u*.08);
+  drag.d=d;drag.sg=sg;drag.free=free;drag.vis=vis;
+  drag.p.el.style.setProperty(drag.axis==='x'?'--dx':'--dy',(sg*vis)+'px');
+  e.preventDefault()});
+function endDrag(e,cancel){if(!drag||e.pointerId!==drag.id)return;const D=drag;drag=null;
+  try{board.releasePointerCapture(e.pointerId)}catch(_){}
+  const p=D.p;
+  if(D.moved){p.el.classList.remove('drag');
+    const u=unit(),ad=Math.abs(D.d||0);
+    if(!cancel&&D.free>0&&ad>u*.18){const n=Math.min(D.free,Math.max(1,Math.round(ad/u)));slide(p,D.axis==='y'?D.sg:0,D.axis==='x'?D.sg:0,n)}
+    else place(p);
+    return}
+  if(cancel)return;
+  // 点一下
+  const cell=cellAt(e);
+  if(p){if(sel===p){select(null)}else select(p);return}
+  if(sel&&cell){const g=grid();if(!g[cell[0]][cell[1]]){
+    const m=hintMoves.filter(m=>m.cells.some(([r,c])=>r===cell[0]&&c===cell[1])).sort((a,b)=>a.n-b.n)[0];
+    if(m){slide(sel,m.dr,m.dc,m.n);return}}}
+  select(null)}
+board.addEventListener('pointerup',e=>endDrag(e,false));
+board.addEventListener('pointercancel',e=>endDrag(e,true));
+
+// ================= 棋盘底图：信笺 + 细粉线外框 + 出口桃花 =================
+const bgc=$('bgc'),bctx=bgc.getContext('2d');
+const fibers=[];for(let i=0;i<520;i++)fibers.push([Math.random(),Math.random(),Math.random()*8+2,Math.random()*3,Math.random()*.06]);
+const FONT='"Noto Serif SC","Songti SC","STSong",serif';
+function petal(ctx,x,y,s,col){ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,y+s);ctx.bezierCurveTo(x-s*1.0,y+s*.25,x-s*.7,y-s*.85,x,y-s);ctx.bezierCurveTo(x+s*.7,y-s*.85,x+s*1.0,y+s*.25,x,y+s);ctx.fill()}
+function petalFlower(ctx,x,y,s){ctx.save();ctx.translate(x,y);
+  for(let k=0;k<5;k++){ctx.save();ctx.rotate(k*Math.PI*2/5);const g=ctx.createRadialGradient(0,0,s*.1,0,0,s*1.7);g.addColorStop(0,'#d9577f');g.addColorStop(.3,'#f08aa8');g.addColorStop(1,'#f9bccb');petal(ctx,0,-s*.9,s*.78,g);ctx.restore()}
+  ctx.strokeStyle='#c94d74';ctx.lineWidth=.45;ctx.fillStyle='#f5cf6a';for(let k=0;k<9;k++){const a=k*Math.PI*2/9+.2,l=s*(.42+.12*(k%2));ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(a)*l,Math.sin(a)*l);ctx.stroke();ctx.beginPath();ctx.arc(Math.cos(a)*l,Math.sin(a)*l,s*.07,0,7);ctx.fill()}
+  ctx.restore()}
+function frameLine(ctx,l,t,r,b,rad,g1,g2){ctx.beginPath();ctx.moveTo(g1,b);ctx.lineTo(l+rad,b);ctx.arcTo(l,b,l,b-rad,rad);ctx.lineTo(l,t+rad);ctx.arcTo(l,t,l+rad,t,rad);ctx.lineTo(r-rad,t);ctx.arcTo(r,t,r,t+rad,rad);ctx.lineTo(r,b-rad);ctx.arcTo(r,b,r-rad,b,rad);ctx.lineTo(g2,b);ctx.stroke()}
+function drawBoard(){const W=board.offsetWidth,H=board.offsetHeight,u=unit(),DPR=Math.min(2,window.devicePixelRatio||1);
+  if(W<60)return;bgc.width=W*DPR;bgc.height=H*DPR;const ctx=bctx;ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle='#fffaf8';ctx.fillRect(0,0,W,H);
+  ctx.lineWidth=.6;for(const[x,y,l,a,o]of fibers){const px=x*W,py=y*H;ctx.strokeStyle=`rgba(200,140,150,${o})`;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+Math.cos(a)*l,py+Math.sin(a)*l);ctx.stroke()}
+  // 每一格淡淡的格子
+  ctx.strokeStyle='rgba(190,110,135,.17)';ctx.lineWidth=.8;
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ctx.beginPath();ctx.roundRect(MX+c*u+3,MT+r*u+3,u-6,u-6,u*.15);ctx.stroke()}
+  // 外框：一粗一细两道细粉线，出口处断开
+  const L=MX-8,T=MT-8,R=MX+COLS*u+8,B=MT+ROWS*u+8,g1=MX+u,g2=MX+3*u;
+  ctx.lineCap='round';
+  ctx.strokeStyle='rgba(170,100,120,.55)';ctx.lineWidth=1.3;frameLine(ctx,L,T,R,B,8,g1,g2);
+  ctx.strokeStyle='rgba(170,100,120,.3)';ctx.lineWidth=.7;frameLine(ctx,L+4,T+4,R-4,B-4,5,g1,g2);
+  ctx.strokeStyle='rgba(170,100,120,.5)';ctx.lineWidth=1.3;for(const x of[g1,g2]){ctx.beginPath();ctx.moveTo(x,B-3.5);ctx.lineTo(x,B+3.5);ctx.stroke()}
+  // 出口：一朵小桃花 + 淡淡的「出」
+  petalFlower(ctx,(g1+g2)/2,B+1,7.5);
+  ctx.fillStyle='rgba(185,133,147,.62)';ctx.font=`300 14px ${FONT}`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('出',(g1+g2)/2,B+23)}
+if('ResizeObserver' in window)new ResizeObserver(drawBoard).observe(board);
+addEventListener('resize',drawBoard);
+
+// ================= 桃花飘落 =================
+const fx=$('fx'),fctx=fx.getContext('2d');let parts=[],fraf=null,fLast=0;
+function fitFx(){const D=Math.min(2,window.devicePixelRatio||1);fx.width=innerWidth*D;fx.height=innerHeight*D;fctx.setTransform(D,0,0,D,0,0)}
+fitFx();addEventListener('resize',fitFx);
+function spawnPetals(first){const W=innerWidth,H=innerHeight;
+  if(first)for(let i=0;i<58;i++)parts.push({x:rand(-60,W),y:rand(-H*.5,-10),vx:rand(15,45),vy:rand(40,90),rot:rand(0,6),vr:rand(-2,2),life:rand(5,7.5),sz:rand(4,7),col:['#f6a5bb','#f18fab','#fbc4d2','#f7b3c5'][i%4]});
+  const rc=board.getBoundingClientRect();
+  for(let i=0;i<10;i++)parts.push({x:rc.left+rc.width/2+rand(-rc.width*.2,rc.width*.2),y:rc.bottom-20,vx:rand(-60,60),vy:rand(-90,-20),rot:rand(0,6),vr:rand(-3,3),life:rand(1.4,2.4),sz:rand(3,5.5),col:'#f18fab'})}
+function fxFrame(t){const dt=fLast?Math.min(.05,(t-fLast)/1000):0;fLast=t;fctx.clearRect(0,0,innerWidth,innerHeight);
+  for(const p of parts){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.rot+=p.vr*dt;p.vx+=Math.sin(t/500+p.y*.02)*.8;if(p.vy<0)p.vy+=140*dt;
+    fctx.globalAlpha=Math.max(0,Math.min(1,p.life));fctx.save();fctx.translate(p.x,p.y);fctx.rotate(p.rot);petal(fctx,0,0,p.sz,p.col);fctx.restore()}
+  fctx.globalAlpha=1;parts=parts.filter(p=>p.life>0);
+  fraf=parts.length?requestAnimationFrame(fxFrame):null;if(!fraf){fLast=0;fctx.clearRect(0,0,innerWidth,innerHeight)}}
+function kickFx(){if(!fraf)fraf=requestAnimationFrame(fxFrame)}
+
+// ================= 声音（真实录音，见 sounds/CREDITS.md） =================
+let soundOn=true;try{soundOn=localStorage.getItem('gomoku-sound')!=='off'}catch(e){}
+const POOL={},unlocked={v:false};
+function apool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
+function sfx(f,vol,rate){if(!soundOn)return;const ps=apool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
+// iPhone 要求声音第一次由手指触发：第一次点击时把所有声音静音播一下，之后才能正常出声
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather'].forEach(f=>apool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
+// 玉牌滑到位：珠子落下的小弹跳，五个里随机挑
+function clack(){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),.7,1.02+(Math.random()-.5)*.05)}
+function syncSound(){$('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}
+
+// ================= 控件 =================
+function load(i,quiet){li=i;try{localStorage.setItem('huarongdao-level',String(i))}catch(e){}build();if(!quiet)sfx('pearlGather',.8,1)}
+$('level').onchange=e=>load(+e.target.value);
+$('restart').onclick=()=>{if(hist.length||won)sfx('pearlGather',.8,1);const q=!hist.length&&!won;parts=[];build();if(q)setStatus()};
+$('undo').onclick=undo;
+$('next').onclick=()=>{if(li<LEVELS.length-1){parts=[];load(li+1)}};
+$('sound').onclick=()=>{soundOn=!soundOn;try{localStorage.setItem('gomoku-sound',soundOn?'on':'off')}catch(e){}syncSound();if(soundOn)clack()};
+// 给自动检查用的小窗口
+window.__h={LEVELS,
+  get pieces(){return pieces.map(p=>({id:p.id,r:p.r,c:p.c,w:p.w,h:p.h}))},get steps(){return steps},get won(){return won},get li(){return li},get hist(){return hist.length},
+  load(i){load(i,true)},slide(id,dr,dc,n){const p=pieces.find(x=>x.id===id);if(!p||freeRun(p,dr,dc)<(n||1))return false;slide(p,dr,dc,n||1);return true},
+  free(id,dr,dc){return freeRun(pieces.find(x=>x.id===id),dr,dc)},undo,prog:()=>prog,get selId(){return sel&&sel.id},get unit(){return unit()}};
+fillSelect();syncSound();build();drawBoard();
+if(document.fonts){document.fonts.load(`600 24px ${FONT}`,'曹操关羽张飞赵云马超黄忠兵出').then(drawBoard,()=>{});document.fonts.ready.then(drawBoard)}
+</script>
+<script>
+(function(){const m=document.getElementById('rulesMask'),open=()=>m.classList.add('on'),close=()=>m.classList.remove('on');
+  document.getElementById('helpBtn').addEventListener('click',open);m.addEventListener('click',e=>{if(e.target===m||e.target.classList.contains('close'))close()});
+  addEventListener('keydown',e=>{if(e.key==='Escape')close()})})();
+</script>
+</body>
+</html>
