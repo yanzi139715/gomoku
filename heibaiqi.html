@@ -63,6 +63,7 @@ select:focus{outline:none;border-color:var(--ink)}
 .sc.on{opacity:1;color:var(--ink)}
 .msg{display:inline-flex;align-items:center;gap:6px;text-align:center}
 #board{-webkit-tap-highlight-color:transparent}
+.studio{margin-top:10px;font-size:11px;letter-spacing:3px;text-indent:3px;color:var(--soft);opacity:.75;user-select:none;position:relative}
 </style>
 </head>
 <body>
@@ -86,6 +87,7 @@ select:focus{outline:none;border-color:var(--ink)}
 <div class="frame"><canvas id="board" aria-label="黑白棋棋盘"></canvas></div>
 <div class="actions"><button class="restart" id="undo">悔棋</button><button class="restart" id="restart">重新开始</button><button class="restart" id="hint">落点提示 · 开</button><button class="restart" id="sound">声音 · 开</button></div>
 <div class="footer">落 · 翻 · 墨 · 白</div>
+<div class="studio">妍子工作室 出品</div>
 
 <script>
 // ================= 基础 =================
@@ -308,5 +310,6 @@ reset();
   document.getElementById('helpBtn').addEventListener('click',open);m.addEventListener('click',e=>{if(e.target===m||e.target.classList.contains('close'))close()});
   addEventListener('keydown',e=>{if(e.key==='Escape')close()})})();
 </script>
+<script>try{localStorage.setItem('taoyuan-last','heibaiqi.html')}catch(e){}</script>
 </body>
 </html>

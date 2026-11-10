@@ -23,12 +23,26 @@ body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padd
 @media(max-width:480px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%}a.card{padding:8px 8px 12px}.name{font-size:17px;letter-spacing:5px;text-indent:5px;margin-top:8px}.tag{font-size:11px;letter-spacing:1px}}
 a.card{display:block;text-decoration:none;color:inherit;background:#fffaf8;border-radius:4px;box-shadow:0 1px 0 #e6c3ca,0 10px 30px rgba(140,70,90,.10);padding:12px 12px 16px;transition:transform .25s,box-shadow .25s}
 a.card:hover{transform:translateY(-3px);box-shadow:0 1px 0 #e6c3ca,0 16px 38px rgba(140,70,90,.16)}
+a.card:active{transform:scale(.98)}
+a.card{position:relative;animation:rise .7s cubic-bezier(.2,.7,.3,1) both;animation-delay:calc(var(--i,0)*70ms + .15s)}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+/* 上次玩的那个棋：右上角一枚小小的胭脂印 */
+a.card.last::after{content:'上次在下';position:absolute;top:10px;right:10px;font-size:11px;letter-spacing:2px;padding:2px 7px 2px 9px;color:#fff;background:rgba(201,77,116,.82);border-radius:3px}
+@media(max-width:480px){
+  /* 九张卡片两列排，最后一张横着铺满一行：左边小图、右边名字 */
+  a.card:last-child{grid-column:1/-1;display:flex;align-items:center;gap:6px;padding:8px 14px 8px 8px}
+  a.card:last-child canvas{width:52%;flex:none}
+  a.card:last-child .txt{flex:1}
+  a.card.last::after{top:6px;right:6px;font-size:10px;padding:1px 5px 1px 6px}
+}
+@media(prefers-reduced-motion:reduce){a.card{animation:none}}
 
 
 canvas{display:block;width:100%;height:auto;border-radius:2px}
 .name{font-size:20px;font-weight:400;letter-spacing:8px;text-indent:8px;text-align:center;margin-top:12px}
 .tag{font-size:12px;letter-spacing:4px;color:var(--soft);text-align:center;margin-top:4px}
 .footer{margin-top:40px;font-size:11px;letter-spacing:4px;color:var(--line);position:relative}
+.studio{margin-top:10px;font-size:11px;letter-spacing:3px;text-indent:3px;color:var(--soft);opacity:.75;user-select:none;position:relative}
 </style>
 </head>
 <body>
@@ -36,17 +50,18 @@ canvas{display:block;width:100%;height:auto;border-radius:2px}
 <div class="title">桃 源 弈</div>
 <div class="sub">一 册 棋 ， 慢 慢 下</div>
 <div class="grid">
-  <a class="card" href="wuziqi.html"><canvas data-g="wu" width="560" height="360"></canvas><div class="name">五子棋</div><div class="tag">五珠连成一行诗</div></a>
-  <a class="card" href="tiaoqi.html"><canvas data-g="tiao" width="560" height="360"></canvas><div class="name">跳棋</div><div class="tag">跳过一座座小桥</div></a>
-  <a class="card" href="xiangqi.html"><canvas data-g="xiang" width="560" height="360"></canvas><div class="name">象棋</div><div class="tag">楚河汉界，一局春秋</div></a>
-  <a class="card" href="doushou.html"><canvas data-g="dou" width="560" height="360"></canvas><div class="name">斗兽棋</div><div class="tag">象怕鼠，鼠怕猫</div></a>
-  <a class="card" href="weiqi.html"><canvas data-g="wei" width="560" height="360"></canvas><div class="name">围棋</div><div class="tag">黑白之间，留一片空</div></a>
-  <a class="card" href="junqi.html"><canvas data-g="jun" width="560" height="360"></canvas><div class="name">军棋</div><div class="tag">翻开一枚，便是千军</div></a>
-  <a class="card" href="heibaiqi.html"><canvas data-g="hei" width="560" height="360"></canvas><div class="name">黑白棋</div><div class="tag">一翻一落，墨白相映</div></a>
-  <a class="card" href="feixingqi.html"><canvas data-g="fei" width="560" height="360"></canvas><div class="name">飞行棋</div><div class="tag">纸鸢掠过，桃花满枝</div></a>
-  <a class="card" href="huarongdao.html"><canvas data-g="hua" width="560" height="360"></canvas><div class="name">华容道</div><div class="tag">送君出关，一步一花</div></a>
+  <a class="card" style="--i:0" href="wuziqi.html"><canvas data-g="wu" width="560" height="360"></canvas><div class="txt"><div class="name">五子棋</div><div class="tag">五珠连成一行诗</div></div></a>
+  <a class="card" style="--i:1" href="tiaoqi.html"><canvas data-g="tiao" width="560" height="360"></canvas><div class="txt"><div class="name">跳棋</div><div class="tag">跳过一座座小桥</div></div></a>
+  <a class="card" style="--i:2" href="xiangqi.html"><canvas data-g="xiang" width="560" height="360"></canvas><div class="txt"><div class="name">象棋</div><div class="tag">楚河汉界，一局春秋</div></div></a>
+  <a class="card" style="--i:3" href="doushou.html"><canvas data-g="dou" width="560" height="360"></canvas><div class="txt"><div class="name">斗兽棋</div><div class="tag">象怕鼠，鼠怕猫</div></div></a>
+  <a class="card" style="--i:4" href="weiqi.html"><canvas data-g="wei" width="560" height="360"></canvas><div class="txt"><div class="name">围棋</div><div class="tag">黑白之间，留一片空</div></div></a>
+  <a class="card" style="--i:5" href="junqi.html"><canvas data-g="jun" width="560" height="360"></canvas><div class="txt"><div class="name">军棋</div><div class="tag">翻开一枚，便是千军</div></div></a>
+  <a class="card" style="--i:6" href="heibaiqi.html"><canvas data-g="hei" width="560" height="360"></canvas><div class="txt"><div class="name">黑白棋</div><div class="tag">一翻一落，墨白相映</div></div></a>
+  <a class="card" style="--i:7" href="feixingqi.html"><canvas data-g="fei" width="560" height="360"></canvas><div class="txt"><div class="name">飞行棋</div><div class="tag">纸鸢掠过，桃花满枝</div></div></a>
+  <a class="card" style="--i:8" href="huarongdao.html"><canvas data-g="hua" width="560" height="360"></canvas><div class="txt"><div class="name">华容道</div><div class="tag">送君出关，一步一花</div></div></a>
 </div>
 <div class="footer">落 · 桃 · 成 · 诗</div>
+<div class="studio">妍子工作室 出品</div>
 <script>
 let ctx;
 function blob(x,y,r,col,a){const b=ctx.createRadialGradient(x,y,0,x,y,r);b.addColorStop(0,col.replace('A',a));b.addColorStop(1,col.replace('A',0));ctx.fillStyle=b;ctx.fillRect(x-r,y-r,r*2,r*2)}
@@ -74,35 +89,39 @@ const DRAW={
     [[1,3,1],[2,4,1],[3,5,1],[4,6,1],[5,7,1],[1,6,2],[2,8,2],[3,3,2],[4,4,2],[5,5,2]].forEach(([r,cc,p])=>pearl(x0+cc*c,y0+r*c,c*.42,p));
     ctx.strokeStyle='rgba(214,110,138,.8)';ctx.lineWidth=2.5;ctx.beginPath();for(let i=0;i<=40;i++){const k=i/40,x=x0+c*3+c*4*k,y=y0+c+c*4*k,w=Math.sin(k*Math.PI*4)*4;ctx.lineTo(x-w*.7,y+w*.7)}ctx.stroke();
     flower(x0+c*2,y0+c*5,8);flower(x0+c*8,y0+c*1,8)},
-  tiao(W,H){const s=34,cx=W/2,top=40,cols=[['#f0b6c4','#d6889c'],['#eac874','#c9a35a'],['#b3cdac','#86a37c'],['#aed2d7','#7ea9b0']];
-    const pts=[];for(let r=0;r<8;r++)for(let i=0;i<=r;i++)pts.push([cx+(i-r/2)*s*1.15,top+r*s]);
-    ctx.fillStyle='rgba(170,100,120,.35)';pts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,3.2,0,7);ctx.fill()});
-    pts.forEach(([x,y],i)=>{if(i<6)pearl(x,y,14,2,cols[0]);else if(i>=28&&i<31)pearl(x,y,14,2,cols[2]);else if(i>=33&&i<36)pearl(x,y,14,2,cols[3])});
-    pearl(pts[13][0],pts[13][1],14,2,cols[1]);
-    ctx.setLineDash([4,6]);ctx.strokeStyle='rgba(214,110,138,.7)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(pts[13][0],pts[13][1]);ctx.quadraticCurveTo(pts[13][0]+30,pts[13][1]-50,pts[4][0],pts[4][1]-6);ctx.stroke();ctx.setLineDash([]);
-    flower(pts[19][0],pts[19][1],7)},
+  tiao(W,H){const D=24.5,cx=W/2,cy=H/2,SQ=Math.sqrt(3)/2,P6=[[234,150,170],[146,184,136],[166,156,200],[140,190,198],[244,224,228],[234,200,116]];
+    const holes=[];for(let q=-8;q<=8;q++)for(let r=-8;r<=8;r++){const s2=-q-r;if(Math.abs(s2)>8)continue;if((q>=-4&&r>=-4&&s2>=-4)||(q<=4&&r<=4&&s2<=4))holes.push({x:cx+(q+r/2)*D,y:cy+r*SQ*D,c:r>=5?0:r<=-5?3:-1})}
+    const T=sg=>[[8,-4],[-4,8],[-4,-4]].map(([q,r])=>[cx+(sg*q+sg*r/2)*D,cy+sg*r*SQ*D]);
+    ctx.save();ctx.shadowColor='rgba(140,70,90,.16)';ctx.shadowBlur=16;ctx.shadowOffsetY=6;ctx.fillStyle=ctx.strokeStyle='#fffdfc';ctx.lineJoin='round';ctx.lineWidth=D*1.5;for(const t of[T(1),T(-1)]){ctx.beginPath();ctx.moveTo(...t[0]);ctx.lineTo(...t[1]);ctx.lineTo(...t[2]);ctx.closePath();ctx.fill();ctx.stroke()}ctx.restore();
+    holes.forEach(h=>{ctx.strokeStyle='rgba(170,100,120,.45)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(h.x,h.y,D*.26,0,7);ctx.stroke()});
+    const jade=(x,y,c)=>{const R=D*.42;ctx.save();ctx.beginPath();ctx.arc(x,y,R,0,7);ctx.clip();const g=ctx.createRadialGradient(x-R*.2,y-R*.25,R*.1,x,y,R*1.05);g.addColorStop(0,`rgb(${c.map(v=>v+(255-v)*.45|0)})`);g.addColorStop(.6,`rgb(${c})`);g.addColorStop(1,`rgb(${c.map(v=>v*.8|0)})`);ctx.fillStyle=g;ctx.fillRect(x-R,y-R,R*2,R*2);
+      const hg=ctx.createRadialGradient(x-R*.3,y-R*.35,0,x-R*.3,y-R*.35,R*.6);hg.addColorStop(0,'rgba(255,255,255,.55)');hg.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=hg;ctx.fillRect(x-R,y-R,R*2,R*2);ctx.restore()};
+    holes.forEach((h,i)=>{if(h.c===0&&i%4!==1)jade(h.x,h.y,P6[0]);if(h.c===3&&i%3!==0)jade(h.x,h.y,P6[3])});
+    const mid=holes.filter(h=>h.c<0);[[40,0],[30,3],[22,0],[47,3]].forEach(([k,p])=>jade(mid[k].x,mid[k].y,P6[p]));
+    flower(cx,cy,6)},
   xiang(W,H){const c=58,x0=W/2-c*4,y0=36;ctx.strokeStyle=LINE;ctx.lineWidth=1.6;
     for(let j=0;j<6;j++){if(j===2||j===3)continue}grid(x0,y0,9,3,c);grid(x0,y0+c*3,9,3,c);ctx.beginPath();ctx.moveTo(x0,y0+c*2);ctx.lineTo(x0,y0+c*3);ctx.moveTo(x0+c*8,y0+c*2);ctx.lineTo(x0+c*8,y0+c*3);ctx.stroke();
     ctx.fillStyle='rgba(170,100,120,.5)';ctx.font=`300 26px 'Noto Serif SC',serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('楚　河',x0+c*2,y0+c*2.5);ctx.fillText('汉　界',x0+c*6,y0+c*2.5);
     disc(x0+c*2,y0+c,25,1,'車');disc(x0+c*5,y0+c*1,25,1,'馬');disc(x0+c*3,y0+c*4,25,2,'炮',1);disc(x0+c*6,y0+c*4,25,2,'帥',1);disc(x0+c*4,y0+c*2,25,2,'兵',1);flower(x0+c*4,y0+c*2.5+48,7)},
-  dou(W,H){const c=54,x0=W/2-c*3.5,y0=H/2-c*2.5;ctx.strokeStyle=LINE;ctx.lineWidth=1.6;for(let i=0;i<=7;i++){ctx.beginPath();ctx.moveTo(x0+i*c,y0);ctx.lineTo(x0+i*c,y0+c*5);ctx.stroke()}for(let j=0;j<=5;j++){ctx.beginPath();ctx.moveTo(x0,y0+j*c);ctx.lineTo(x0+c*7,y0+j*c);ctx.stroke()}
-    [[1,1],[2,1],[4,1],[5,1]].forEach(([cx])=>{});for(const cx of[1,4])for(const cy of[1,2,3]){ctx.fillStyle='rgba(160,205,210,.32)';ctx.fillRect(x0+cx*c+1,y0+cy*c+1,c*2-2,c-2)}
-    ctx.strokeStyle='rgba(110,170,180,.5)';ctx.lineWidth=1.4;for(const cx of[1,4])for(let k=0;k<5;k++){const y=y0+c*1.4+k*c*.42;ctx.beginPath();for(let i=0;i<=20;i++){const x=x0+cx*c+8+i*(c*2-16)/20;ctx.lineTo(x,y+Math.sin(i*.9+k)*2.5)}ctx.stroke()}
-    disc(x0+c*1.5,y0+c*2.5,22,2,'鼠',1);disc(x0+c*3.5,y0+c*.5,22,1,'象');disc(x0+c*3.5,y0+c*4.5,22,2,'獅',1);disc(x0+c*6.5,y0+c*.5,22,1,'虎');flower(x0+c*3.5,y0+c*2.5,10);flower(x0+c*.5,y0+c*4.5,7)},
-  jun(W,H){const cx=92,cy=58,x0=W/2-cx*2,y0=H/2-cy*2.5,R=22,P=(i,j)=>[x0+i*cx,y0+j*cy];
+  dou(W,H){const c=50,x0=W/2-c*4.5,y0=H/2-c*3.5;grid(x0,y0,10,8,c);
+    // 棋盘横过来放：左右两头是兽穴，中间两汪春水
+    for(const ry of[1,4]){const x=x0+c*3,y=y0+ry*c,w=c*3,h=c*2;ctx.save();ctx.filter='blur(4px)';const g=ctx.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,'rgba(178,222,222,.9)');g.addColorStop(1,'rgba(150,206,210,.85)');ctx.fillStyle=g;ctx.beginPath();ctx.roundRect(x+4,y+4,w-8,h-8,10);ctx.fill();ctx.restore();
+      ctx.strokeStyle='rgba(80,150,165,.28)';ctx.lineWidth=1.3;for(let k=0;k<4;k++){const yy=y+16+k*(h-32)/3;ctx.beginPath();for(let xx=10;xx<=w-10;xx+=3){const t=(xx-10)/(w-20),y2=yy+Math.sin(xx/8+k)*2*Math.sin(t*Math.PI);xx===10?ctx.moveTo(x+xx,y2):ctx.lineTo(x+xx,y2)}ctx.stroke()}
+      ctx.save();ctx.translate(x+w*.62,y+h*.38);ctx.rotate(.6);petal(0,0,4.5,'#f18fab');ctx.restore()}
+    for(const[i,j,s2]of[[0,3,10],[0,2,5],[0,4,5],[1,3,5],[8,3,10],[8,2,5],[8,4,5],[7,3,5]])flower(x0+c*(i+.5),y0+c*(j+.5),s2);
+    const R=20;disc(x0+c*.5,y0+c*.5,R,2,'獅',1);disc(x0+c*.5,y0+c*6.5,R,2,'虎',1);disc(x0+c*2.5,y0+c*1.5,R,2,'鼠',1);disc(x0+c*4.5,y0+c*3.5,R,1,'象');disc(x0+c*8.5,y0+c*.5,R,1,'虎');disc(x0+c*8.5,y0+c*6.5,R,1,'獅');disc(x0+c*6.5,y0+c*5.5,R,1,'豹')},
+  jun(W,H){const cx=96,cy=56,x0=W/2-cx*2,y0=H/2-cy*2.5,R=24,P=(i,j)=>[x0+i*cx,y0+j*cy];
     ctx.strokeStyle=LINE;ctx.lineWidth=1.4;for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(...P(i,0));ctx.lineTo(...P(i,5));ctx.stroke()}for(let j=0;j<6;j++){ctx.beginPath();ctx.moveTo(...P(0,j));ctx.lineTo(...P(4,j));ctx.stroke()}
     ctx.beginPath();ctx.moveTo(...P(1,2));ctx.lineTo(...P(3,4));ctx.moveTo(...P(3,2));ctx.lineTo(...P(1,4));ctx.stroke();
-    // 铁路：粉色双线
     ctx.strokeStyle='rgba(214,110,138,.55)';ctx.lineWidth=1.2;for(const d of[-3,3]){for(const j of[1,5]){ctx.beginPath();ctx.moveTo(P(0,j)[0],P(0,j)[1]+d);ctx.lineTo(P(4,j)[0],P(4,j)[1]+d);ctx.stroke()}for(const i of[0,4]){ctx.beginPath();ctx.moveTo(P(i,1)[0]+d,P(i,1)[1]);ctx.lineTo(P(i,5)[0]+d,P(i,5)[1]);ctx.stroke()}}
-    // 行营
-    for(const[i,j]of[[1,2],[3,2],[2,3],[1,4],[3,4]]){const[x,y]=P(i,j);ctx.strokeStyle='rgba(170,100,120,.5)';ctx.lineWidth=1.2;ctx.fillStyle='#fffaf8';ctx.beginPath();ctx.arc(x,y,R*.9,0,7);ctx.fill();ctx.stroke();flower(x,y,6)}
-    const back=(x,y)=>{pearl(x,y,R,2);ctx.save();ctx.globalAlpha=.6;flower(x,y,7);ctx.restore()};
-    [[0,0],[1,0],[3,0],[4,1],[0,2],[4,2],[0,3],[4,3],[2,4],[0,5],[2,5],[4,5],[1,1],[3,5]].forEach(([i,j])=>back(...P(i,j)));
-    disc(...P(2,0),R,1,'司令');disc(...P(4,0),R,2,'炸弹',1);disc(...P(2,1),R,2,'工兵',1);disc(...P(3,1),R,1,'军旗');disc(...P(1,5),R,1,'地雷')},
+    for(const[i,j]of[[1,2],[3,2],[2,3],[1,4],[3,4]]){const[x,y]=P(i,j);ctx.strokeStyle='rgba(170,100,120,.45)';ctx.lineWidth=1.2;ctx.fillStyle='#fffaf8';ctx.beginPath();ctx.arc(x,y,R*.85,0,7);ctx.fill();ctx.stroke();flower(x,y,5.5)}
+    const back=(x,y)=>{pearl(x,y,R,2);ctx.save();ctx.globalAlpha=.35;flower(x,y,6);ctx.restore()};
+    [[0,0],[1,0],[4,1],[0,3],[4,4],[2,5],[4,5]].forEach(([i,j])=>back(...P(i,j)));
+    disc(...P(2,0),R,1,'司令');disc(...P(3,1),R,2,'炸弹',1);disc(...P(1,1),R,2,'工兵',1);disc(...P(0,5),R,1,'军旗')},
   hei(W,H){const c=40,x0=W/2-c*4,y0=H/2-c*4;ctx.strokeStyle=LINE;ctx.lineWidth=1.4;for(let i=0;i<=8;i++){ctx.beginPath();ctx.moveTo(x0+i*c,y0);ctx.lineTo(x0+i*c,y0+8*c);ctx.stroke();ctx.beginPath();ctx.moveTo(x0,y0+i*c);ctx.lineTo(x0+8*c,y0+i*c);ctx.stroke()}
     for(const[i,j]of[[2,2],[6,2],[2,6],[6,6]])flower(x0+i*c,y0+j*c,6);
     const C=(i,j,p)=>pearl(x0+(i+.5)*c,y0+(j+.5)*c,c*.42,p);[[3,3,2],[4,4,2],[3,4,1],[4,3,1],[5,3,1],[2,4,2],[3,5,1],[4,5,1],[5,2,2],[2,2,1]].forEach(([i,j,p])=>C(i,j,p));},
-  fei(W,H){const s=26,cx=W/2-50,cy=H/2,col=[[234,150,170],[140,190,198],[146,184,136],[234,200,116]];
+  fei(W,H){const s=29,cx=W/2-56,cy=H/2,col=[[234,150,170],[140,190,198],[146,184,136],[234,200,116]];
     const sq=(i,j,k,a=.38)=>{const c=col[k],x=cx+i*s,y=cy+j*s;ctx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},${a})`;ctx.beginPath();ctx.roundRect(x-s*.42,y-s*.42,s*.84,s*.84,5);ctx.fill()};
     // 十字形：四条臂，每条 3 格宽、4 格长，颜色轮流
     let k=0;for(let L=2;L<=5;L++)for(let w=-1;w<=1;w++){sq(w,-L,(k++)%4);sq(L,w,(k++)%4);sq(-w,L,(k++)%4);sq(-L,-w,(k++)%4)}
@@ -117,7 +136,7 @@ const DRAW={
     const dx=W/2+178,dy=H/2,d=58;ctx.save();ctx.shadowColor='rgba(140,70,90,.2)';ctx.shadowBlur=12;ctx.shadowOffsetY=5;ctx.fillStyle='#f7f1ed';ctx.beginPath();ctx.roundRect(dx-d/2,dy-d/2,d,d,d*.22);ctx.fill();ctx.restore();
     let g=ctx.createRadialGradient(dx-d*.2,dy-d*.25,2,dx,dy,d*.8);g.addColorStop(0,'#fffefc');g.addColorStop(1,'#efe6e1');ctx.fillStyle=g;ctx.beginPath();ctx.roundRect(dx-d/2,dy-d/2,d,d,d*.22);ctx.fill();
     for(const[a2,b2]of[[-1,-1],[1,-1],[-1,1],[1,1]])pearl(dx+a2*d*.27,dy+b2*d*.27,5.5,2,['#f4b6c6','#d77d97'])},
-  hua(W,H){const c=58,x0=W/2-c*2,y0=H/2-c*2.5-6;ctx.strokeStyle='rgba(170,100,120,.5)';ctx.lineWidth=1.4;ctx.beginPath();ctx.roundRect(x0-6,y0-6,c*4+12,c*5+12,8);ctx.stroke();
+  hua(W,H){const c=62,x0=W/2-c*2,y0=H/2-c*2.5-8;ctx.strokeStyle='rgba(170,100,120,.5)';ctx.lineWidth=1.4;ctx.beginPath();ctx.roundRect(x0-6,y0-6,c*4+12,c*5+12,8);ctx.stroke();
     const blk=(i,j,w,h,top,bot,txt)=>{const x=x0+i*c+3,y=y0+j*c+3,ww=w*c-6,hh=h*c-6;ctx.save();ctx.shadowColor='rgba(140,70,90,.22)';ctx.shadowBlur=8;ctx.shadowOffsetY=3;
       const g=ctx.createLinearGradient(x,y,x+ww,y+hh);g.addColorStop(0,top);g.addColorStop(1,bot);ctx.fillStyle=g;ctx.beginPath();ctx.roundRect(x,y,ww,hh,8);ctx.fill();ctx.restore();
       ctx.fillStyle='rgba(255,255,255,.35)';ctx.beginPath();ctx.roundRect(x+3,y+3,ww-6,hh*.35,6);ctx.fill();
@@ -131,6 +150,7 @@ const DRAW={
     B.forEach(([r,cc])=>pearl(x0+cc*c,y0+r*c,c*.45,1));Wt.forEach(([r,cc])=>pearl(x0+cc*c,y0+r*c,c*.45,2));
     for(const[r,cc]of[[2,2],[2,6],[6,2],[6,6],[4,4]])if(!B.concat(Wt).some(p=>p[0]===r&&p[1]===cc))flower(x0+cc*c,y0+r*c,6)}
 };
+try{const L=localStorage.getItem('taoyuan-last');if(L){const a=document.querySelector(`a.card[href="${L}"]`);a&&a.classList.add('last')}}catch(e){}
 document.querySelectorAll('canvas[data-g]').forEach(cv=>{ctx=cv.getContext('2d');ctx.fillStyle='#fffaf8';ctx.fillRect(0,0,cv.width,cv.height);DRAW[cv.dataset.g](cv.width,cv.height)});
 // 背景慢慢飘几片桃花瓣
 const sky=document.getElementById('sky'),sc=sky.getContext('2d');let P=[];

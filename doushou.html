@@ -60,6 +60,7 @@ select:focus{outline:none;border-color:var(--ink)}
 .rules p,.rules li{font-size:13.5px;line-height:1.85;letter-spacing:.5px;color:#7a4a58}
 .rules ul{padding-left:1.2em}.rules li{margin:2px 0}.rules b{font-weight:600;color:var(--ink)}
 .rules .close{display:block;margin:20px auto 0;font-family:inherit;font-size:14px;letter-spacing:4px;padding:8px 30px;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+.studio{margin-top:10px;font-size:11px;letter-spacing:3px;text-indent:3px;color:var(--soft);opacity:.75;user-select:none;position:relative}
 </style>
 </head>
 <body>
@@ -86,6 +87,7 @@ select:focus{outline:none;border-color:var(--ink)}
 <div class="actions"><button class="restart" id="undo">悔棋</button><button class="restart" id="restart">重新开始</button><button class="restart" id="sound">声音 · 开</button></div>
 <div class="rule"><b>象 › 狮 › 虎 › 豹 › 狼 › 狗 › 猫 › 鼠</b><br>同级互吃，鼠能吃象 · 鼠可下水 · 狮虎能跳河<br>踏进对方陷阱便人人可吃 · 先踏进对方兽穴者胜</div>
 <div class="footer">山 · 河 · 穴 · 桃</div>
+<div class="studio">妍子工作室 出品</div>
 
 <script>
 // ================= 基础 =================
@@ -372,5 +374,6 @@ reset();
   document.getElementById('helpBtn').addEventListener('click',open);m.addEventListener('click',e=>{if(e.target===m||e.target.classList.contains('close'))close()});
   addEventListener('keydown',e=>{if(e.key==='Escape')close()})})();
 </script>
+<script>try{localStorage.setItem('taoyuan-last','doushou.html')}catch(e){}</script>
 </body>
 </html>
