@@ -4,10 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>飞行棋 · 桃源弈</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="桃源弈">
+<meta property="og:title" content="飞行棋 · 桃源弈">
+<meta property="og:description" content="一盘桃花信笺风格的中国飞行棋，可以和电脑玩，也可以和朋友同玩。">
+<meta property="og:url" content="https://yanzi139715.github.io/gomoku/feixingqi.html">
+<meta property="og:image" content="https://yanzi139715.github.io/gomoku/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="description" content="一盘桃花信笺风格的中国飞行棋，可以和电脑玩，也可以和朋友同玩。">
 <meta name="theme-color" content="#fbf1f0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='26' fill='%23f8e2e4' stroke='%23e6c3ca' stroke-width='2'/%3E%3Cpath d='M32 14L47 46L33 40L32 50L31 40L17 46Z' fill='%23d9577f' opacity='.7'/%3E%3C/svg%3E">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
+<style>@font-face{font-family:'Noto Serif SC';font-weight:300;font-display:swap;src:url(fonts/noto-serif-sc-300.woff2) format('woff2')}@font-face{font-family:'Noto Serif SC';font-weight:400;font-display:swap;src:url(fonts/noto-serif-sc-400.woff2) format('woff2')}@font-face{font-family:'Noto Serif SC';font-weight:600;font-display:swap;src:url(fonts/noto-serif-sc-600.woff2) format('woff2')}</style>
+<link rel="preload" href="fonts/noto-serif-sc-400.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#fbf1f0;--ink:#8a4a5c;--soft:#b98593;--line:#e6c3ca;--btn:#8a4a5c;--btnInk:#fbf1f0;--rouge:#c0405a;--dc:#e6c3ca}
@@ -213,7 +224,7 @@ function buildBg(){const g0=ctx;ctx=bg.getContext('2d');ctx.setTransform(DPR,0,0
     for(let j=0;j<6;j++){const[r,c]=RUNW[q][j],x=X(c),y=Y(r),s=U*.78;ctx.fillStyle='#fffaf8';rrect(x-s/2,y-s/2,s,s,7);ctx.fill();ctx.fillStyle=rgba(pc.c,.55);ctx.fill();ctx.strokeStyle=rgba(pc.ring,.95);ctx.lineWidth=1;ctx.stroke();
       ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=1.3;
       // 一枚小箭头，指向中央
-      const ax=dc*5,ay=dr*5,nx=-dr*4,ny=dc*4;ctx.beginPath();ctx.moveTo(x-ax*.6+nx,y-ay*.6+ny);ctx.lineTo(x+ax*.8,y+ay*.8);ctx.lineTo(x-ax*.6-nx,y-ay*.6-ny);ctx.stroke()}}
+      const ax=-dc*5,ay=-dr*5,nx=-dr*4,ny=dc*4;ctx.beginPath();ctx.moveTo(x-ax*.6+nx,y-ay*.6+ny);ctx.lineTo(x+ax*.8,y+ay*.8);ctx.lineTo(x-ax*.6-nx,y-ay*.6-ny);ctx.stroke()}}
   ctx=g0}
 
 // ---------- 玉珠飞机（玉石画法同跳棋，上面浅浅刻一只小纸飞机） ----------

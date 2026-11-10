@@ -4,10 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>五子棋 · 桃源弈</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="桃源弈">
+<meta property="og:title" content="五子棋 · 桃源弈">
+<meta property="og:description" content="一盘桃花信笺风格的五子棋，可以和电脑下，也可以两人同下。">
+<meta property="og:url" content="https://yanzi139715.github.io/gomoku/wuziqi.html">
+<meta property="og:image" content="https://yanzi139715.github.io/gomoku/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="description" content="一盘桃花信笺风格的五子棋，可以和电脑下，也可以两人同下。">
 <meta name="theme-color" content="#fbf1f0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='26' fill='%236e2240'/%3E%3Cellipse cx='24' cy='22' rx='8' ry='5' fill='%23ffdcea' opacity='.5' transform='rotate(-30 24 22)'/%3E%3C/svg%3E">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
+<style>@font-face{font-family:'Noto Serif SC';font-weight:300;font-display:swap;src:url(fonts/noto-serif-sc-300.woff2) format('woff2')}@font-face{font-family:'Noto Serif SC';font-weight:400;font-display:swap;src:url(fonts/noto-serif-sc-400.woff2) format('woff2')}@font-face{font-family:'Noto Serif SC';font-weight:600;font-display:swap;src:url(fonts/noto-serif-sc-600.woff2) format('woff2')}</style>
+<link rel="preload" href="fonts/noto-serif-sc-400.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#fbf1f0;--ink:#8a4a5c;--soft:#b98593;--line:#e6c3ca;--btn:#8a4a5c;--btnInk:#fbf1f0}
@@ -222,22 +233,32 @@ function scoreLine(p){let score=0;const opp=3-p;for(const[dr,dc]of DIRS)for(let 
 function patternScore(c,oe){if(c>=5)return 1000000;if(c===4)return oe===2?500000:50000;if(c===3)return oe===2?50000:5000;if(c===2)return oe===2?5000:500;if(c===1)return oe===2?500:50;return 0}
 function evaluate(ac){return scoreLine(ac)-scoreLine(3-ac)*1.2}
 function getCandidates(range){const cs=new Set();let hs=false;for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){if(grid[r][c]){hs=true;for(let dr=-range;dr<=range;dr++)for(let dc=-range;dc<=range;dc++){const nr=r+dr,nc=c+dc;if(nr>=0&&nr<SIZE&&nc>=0&&nc<SIZE&&grid[nr][nc]===0)cs.add(nr*SIZE+nc)}}}if(!hs)return[{r:7,c:7}];return[...cs].map(i=>({r:Math.floor(i/SIZE),c:i%SIZE}))}
-function quickScore(r,c,ac){grid[r][c]=ac;const a=scoreLine(ac);grid[r][c]=3-ac;const d=scoreLine(3-ac);grid[r][c]=0;return a+d}
+// 只看经过这一点的 4 条线（20 个五格窗口），不再整盘扫描，排序快几十倍
+function localScore(r0,c0,p){let score=0;const opp=3-p;for(const[dr,dc]of DIRS)for(let k=0;k<5;k++){const r=r0-dr*k,c=c0-dc*k;let mine=0,blocked=false;for(let i=0;i<5;i++){const nr=r+dr*i,nc=c+dc*i;if(nr<0||nr>=SIZE||nc<0||nc>=SIZE){blocked=true;break}if(grid[nr][nc]===p)mine++;else if(grid[nr][nc]===opp){blocked=true;break}}if(blocked||mine===0)continue;const br=r-dr,bc=c-dc,ar=r+dr*5,ac=c+dc*5,bo=br>=0&&br<SIZE&&bc>=0&&bc<SIZE&&grid[br][bc]===0,ao=ar>=0&&ar<SIZE&&ac>=0&&ac<SIZE&&grid[ar][ac]===0;if(!bo&&!ao)continue;score+=patternScore(mine,(bo?1:0)+(ao?1:0))}return score}
+function quickScore(r,c,ac){grid[r][c]=ac;const a=localScore(r,c,ac);grid[r][c]=3-ac;const d=localScore(r,c,3-ac);grid[r][c]=0;return a+d}
 function minimax(depth,alpha,beta,maxim,ac){
   if(depth===0)return evaluate(ac);const cs=getCandidates(1);if(!cs.length)return evaluate(ac);
   cs.sort((a,b)=>quickScore(b.r,b.c,ac)-quickScore(a.r,a.c,ac));const mv=cs.slice(0,depth>=2?12:20);
   if(maxim){let me=-Infinity;for(const{r,c}of mv){grid[r][c]=ac;if(checkWin(r,c,ac)){grid[r][c]=0;return 1000000+depth}const ev=minimax(depth-1,alpha,beta,false,ac);grid[r][c]=0;me=Math.max(me,ev);alpha=Math.max(alpha,ev);if(beta<=alpha)break}return me}
   const hc=3-ac;let me=Infinity;for(const{r,c}of mv){grid[r][c]=hc;if(checkWin(r,c,hc)){grid[r][c]=0;return-1000000-depth}const ev=minimax(depth-1,alpha,beta,true,ac);grid[r][c]=0;me=Math.min(me,ev);beta=Math.min(beta,ev);if(beta<=alpha)break}return me}
-function aiMove(){
-  if(over){busy=false;return}
-  const ac=aiColor(),diff=document.getElementById('diff').value;let depth,range;
+function searchMove(ac,diff){let depth,range;
   if(diff==='easy'){depth=1;range=2}else if(diff==='medium'){depth=2;range=1}else{depth=3;range=1}
   const cs=getCandidates(range);let bs=-Infinity,bm=cs[0];
   for(const{r,c}of cs){grid[r][c]=ac;if(checkWin(r,c,ac)){grid[r][c]=0;bm={r,c};bs=Infinity;break}grid[r][c]=0}
   if(bs<Infinity)for(const{r,c}of cs){grid[r][c]=3-ac;if(checkWin(r,c,3-ac)){grid[r][c]=0;bm={r,c};bs=Infinity;break}grid[r][c]=0}
   if(bs<Infinity){cs.sort((a,b)=>quickScore(b.r,b.c,ac)-quickScore(a.r,a.c,ac));const mv=cs.slice(0,diff==='hard'?15:diff==='medium'?12:10);
     for(const{r,c}of mv){grid[r][c]=ac;if(checkWin(r,c,ac)){grid[r][c]=0;bm={r,c};break}const s=minimax(depth-1,-Infinity,Infinity,false,ac);grid[r][c]=0;if(s>bs){bs=s;bm={r,c}}}}
-  busy=false;place(bm.r,bm.c)}
+  return bm}
+
+// 电脑放到后台线程里算，想的时候页面照样能点、动画照样走；后台线程不可用时退回直接算
+const ENGINE=[localScore,patternScore,scoreLine,evaluate,getCandidates,quickScore,minimax,checkWin,searchMove].map(f=>f.toString()).join('\n');
+let worker=null;try{worker=new Worker(URL.createObjectURL(new Blob([`const SIZE=${SIZE},DIRS=${JSON.stringify(DIRS)};let grid;\n${ENGINE}\nonmessage=e=>{grid=e.data.grid;postMessage({id:e.data.id,bm:searchMove(e.data.ac,e.data.diff)})}`],{type:'text/javascript'})));
+  worker.onmessage=e=>{if(e.data.id!==gid||over)return;busy=false;place(e.data.bm.r,e.data.bm.c)};worker.onerror=()=>{worker=null}}catch(e){worker=null}
+function aiMove(){
+  if(over){busy=false;return}
+  const ac=aiColor(),diff=document.getElementById('diff').value;
+  if(worker){worker.postMessage({id:gid,grid,ac,diff});return}
+  const bm=searchMove(ac,diff);busy=false;place(bm.r,bm.c)}
 
 // ================= 控件 =================
 document.getElementById('modeSeg').onclick=e=>{const b=e.target.closest('button');if(!b||b.dataset.m===mode)return;mode=b.dataset.m;

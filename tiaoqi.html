@@ -4,10 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>跳棋 · 桃源弈</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="桃源弈">
+<meta property="og:title" content="跳棋 · 桃源弈">
+<meta property="og:description" content="一盘桃花信笺风格的中国跳棋，可以和电脑下，也可以两人同下。">
+<meta property="og:url" content="https://yanzi139715.github.io/gomoku/tiaoqi.html">
+<meta property="og:image" content="https://yanzi139715.github.io/gomoku/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="description" content="一盘桃花信笺风格的中国跳棋，可以和电脑下，也可以两人同下。">
 <meta name="theme-color" content="#fbf1f0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='26' fill='%23f0a9bd'/%3E%3Cellipse cx='24' cy='22' rx='8' ry='5' fill='%23ffffff' opacity='.6' transform='rotate(-30 24 22)'/%3E%3C/svg%3E">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
+<style>@font-face{font-family:'Noto Serif SC';font-weight:300;font-display:swap;src:url(fonts/noto-serif-sc-300.woff2) format('woff2')}@font-face{font-family:'Noto Serif SC';font-weight:400;font-display:swap;src:url(fonts/noto-serif-sc-400.woff2) format('woff2')}@font-face{font-family:'Noto Serif SC';font-weight:600;font-display:swap;src:url(fonts/noto-serif-sc-600.woff2) format('woff2')}</style>
+<link rel="preload" href="fonts/noto-serif-sc-400.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#fbf1f0;--ink:#8a4a5c;--soft:#b98593;--line:#e6c3ca;--btn:#8a4a5c;--btnInk:#fbf1f0}
@@ -63,7 +74,7 @@ select:focus{outline:none;border-color:var(--ink)}
 <a class="back" href="./">‹ 桃源弈</a>
 <button class="help" id="helpBtn" aria-label="规则说明">?</button>
 <div class="rules-mask" id="rulesMask" role="dialog" aria-modal="true" aria-label="跳棋怎么下"><div class="rules"><h3>跳棋怎么下</h3><h4>怎么赢</h4><p>把自己的 10 颗玉珠全部搬到正对面的那个角里。对面的角被占满、而且里面有你的珠子，就算你赢（防止对方故意赖着不走）。</p>
-<h4>每回合，二选一</h4><ul><li><b>走一步</b>：移到旁边相邻的空位。</li><li><b>跳</b>：旁边隔着一颗珠子（谁的都可以），再过去一格是空的，就能跳过去。</li><li>跳完如果还能跳，会继续开出小桃花，可以接着跳，一回合连跳好多下。想停下，就再点一下自己的珠子。</li><li>走一步之后不能再跳；被跳过的珠子不会被吃掉。</li></ul>
+<h4>每回合，二选一</h4><ul><li><b>走一步</b>：移到旁边相邻的空位。</li><li><b>跳</b>：旁边隔着一颗珠子（谁的都可以），再过去一格是空的，就能跳过去。</li><li>跳完如果还能跳，会继续开出小桃花，可以接着跳，一回合连跳好多下。想停下，就再点一下正在跳的这颗珠子。</li><li>走一步之后不能再跳；被跳过的珠子不会被吃掉。</li></ul>
 <h4>小窍门</h4><ul><li>把自己的珠子隔一个摆开，像搭一座座小桥，后面的珠子就能一路连跳过去。</li><li>别让某一颗落在最后面，最后要等它一颗一颗慢慢走。</li></ul><button class="close">知道啦</button></div></div>
 <div class="title">桃 · 跳棋</div>
 <div class="sub">隔着一颗，轻轻跳过去</div>

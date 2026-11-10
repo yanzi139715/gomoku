@@ -4,10 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>围棋 · 桃源弈</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="桃源弈">
+<meta property="og:title" content="围棋 · 桃源弈">
+<meta property="og:description" content="一盘桃花信笺风格的围棋，9、13、19 路，可以和电脑下，也可以两人同下。">
+<meta property="og:url" content="https://yanzi139715.github.io/gomoku/weiqi.html">
+<meta property="og:image" content="https://yanzi139715.github.io/gomoku/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="description" content="一盘桃花信笺风格的围棋，9、13、19 路，可以和电脑下，也可以两人同下。">
 <meta name="theme-color" content="#fbf1f0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='26' fill='%236e2240'/%3E%3Cellipse cx='24' cy='22' rx='8' ry='5' fill='%23ffdcea' opacity='.5' transform='rotate(-30 24 22)'/%3E%3C/svg%3E">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
+<style>@font-face{font-family:'Noto Serif SC';font-weight:300;font-display:swap;src:url(fonts/noto-serif-sc-300.woff2) format('woff2')}@font-face{font-family:'Noto Serif SC';font-weight:400;font-display:swap;src:url(fonts/noto-serif-sc-400.woff2) format('woff2')}@font-face{font-family:'Noto Serif SC';font-weight:600;font-display:swap;src:url(fonts/noto-serif-sc-600.woff2) format('woff2')}</style>
+<link rel="preload" href="fonts/noto-serif-sc-400.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#fbf1f0;--ink:#8a4a5c;--soft:#b98593;--line:#e6c3ca;--btn:#8a4a5c;--btnInk:#fbf1f0}
@@ -70,7 +81,7 @@ select:focus{outline:none;border-color:var(--ink)}
 <div class="rules-mask" id="rulesMask" role="dialog" aria-modal="true" aria-label="围棋怎么下"><div class="rules"><h3>围棋怎么下</h3><h4>目标</h4><p>用棋子围出更大的地盘。下完后数一数：自己活着的棋子，加上被自己围住的空点，多的一方赢。</p>
 <h4>怎么下</h4><ul><li>墨莓（黑）先下，双方轮流把棋子放在交叉点上，放下就不能再挪。</li><li>棋子上下左右挨着的空点叫「气」，连在一起的同色棋子共用气。</li><li>一块棋的气全部被对方堵住，就会被「提」掉，从棋盘上拿走。</li></ul>
 <h4>不能下的地方</h4><ul><li><b>自杀</b>：落下去自己就没有气、又提不到对方的子，这种地方不能下。</li><li><b>打劫</b>：自己的一颗子刚被提掉，不能马上在原地把对方那颗提回来，要先在别处下一手。</li></ul>
-<h4>结束和数子</h4><ul><li>觉得已经没有地方好下了，就点「停一手」。双方连着各停一手，棋局结束。</li><li>结束后，点一下已经活不了的棋块，把它标成死子，再点「确认数子」看结果。</li><li>黑方先下占了便宜，所以白方（珍珠）额外加分：9 路贴 7 点，13 路和 19 路贴 7.5 点。</li><li>也可以随时点「认输」。</li></ul>
+<h4>结束和数子</h4><ul><li>觉得已经没有地方好下了，就点「停一手」。双方连着各停一手，棋局结束。</li><li>结束后，点一下已经活不了的棋块，把它标成死子，再点「确认数子」看结果。</li><li>黑方先下占了便宜，所以白方（珍珠）额外加分：9 路贴 7 点，13 路和 19 路贴 7.5 点。</li><li>轮到你下的时候，也可以点「认输」。</li></ul>
 <h4>初学建议</h4><p>先从 9 路小棋盘下起，一盘十几分钟就能下完。</p><button class="close">知道啦</button></div></div>
 <div class="title">桃 · 围棋</div>
 <div class="sub">一子一子，围出一片春天</div>
