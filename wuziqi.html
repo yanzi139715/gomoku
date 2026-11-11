@@ -191,7 +191,7 @@ function reset(){
 function place(r,c){
   touchPending=null;grid[r][c]=cur;moves.push({r,c,p:cur,t:performance.now()});{const p=cur;setTimeout(()=>clack(p),150)}
   const w=checkWin(r,c,cur);
-  if(w){over=true;winLine=w.slice(0,5);winT=performance.now();winLine.forEach((x,i)=>setTimeout(()=>{if(winLine){const p=P(x.r,x.c);spawnPetals(p.x,p.y,i===0);kick()}},i*120))}
+  if(w){over=true;winLine=w.slice(0,5);winT=performance.now();chime();winLine.forEach((x,i)=>setTimeout(()=>{if(winLine){const p=P(x.r,x.c);spawnPetals(p.x,p.y,i===0);kick()}},i*120))}
   else if(moves.length===SIZE*SIZE)over=true;
   else cur=3-cur;
   setStatus();kick();
@@ -211,13 +211,14 @@ const POOL={},unlocked={v:false};
 function pool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
 function sfx(f,vol,rate){if(!soundOn)return;const ps=pool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
 // iPhone 要求声音第一次由手指触发：第一次点击时把所有声音静音播一下，之后电脑落子也能出声
-function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather','winGuzheng','loseGuzheng'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
 addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
 // 落子：珠子落地后的一下小弹跳，五个里随机挑；墨莓低一点、珍珠高一点；150ms 对准珍珠落到纸面的那一刻
 function clack(p){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),.8,(p===1?.95:1.04)+(Math.random()-.5)*.04)}
 // 赢：古筝 D 羽调五声音阶慢慢往上拨；输（人机模式电脑赢）：四个音慢慢落下
 // 悔棋或重开时，把还在响的输赢声停掉
-function hush(){}
+function hush(){['winGuzheng','loseGuzheng'].forEach(f=>(POOL[f]||[]).forEach(a=>{if(!a.muted)a.pause()}))}
+function chime(){const lose=mode==='pvc'&&cur===aiColor();setTimeout(()=>sfx(lose?'loseGuzheng':'winGuzheng',.85,1),250)}
 function syncSound(){document.getElementById('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}
 
 // ================= 悔棋：和电脑下时退回到你上一步之前 =================
