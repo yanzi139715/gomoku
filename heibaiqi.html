@@ -201,7 +201,7 @@ function setStatus(){const el=$('status'),a=count(g,1),b=count(g,2);let msg='',w
   el.innerHTML=`<span class="sc${!over&&cur===1?' on':''}"><i class="dot p1"></i><span id="c1">${a}</span></span><span class="msg">${msg}${busy&&!over?'<span class="thinking"><i></i><i></i><i></i></span>':''}</span><span class="sc${!over&&cur===2?' on':''}"><i class="dot p2"></i><span id="c2">${b}</span></span>`;
   const h=human();$('undo').disabled=!(mode==='pvc'?moves.some(m=>m.p===h):moves.length)}
 function reset(){
-  hush();if(moves&&moves.length)sfx('pearlGather',.8,1);
+  hush();stopAI();if(moves&&moves.length)sfx('pearlGather',.8,1);
   gid++;g=newBoard();cur=1;over=false;busy=false;moves=[];flips={};placedT={};lastI=-1;note='';hover=null;touchPending=null;winT=0;parts=[];animEnd=0;
   setStatus();kick();
   if(isAI(cur))thinkThen()}
@@ -226,7 +226,11 @@ function advance(animMs){
     if(a!==b)for(let k=0;k<5;k++)setTimeout(()=>{if(over){spawnPetals(rand(40,total-40),rand(40,total-40),k===0);kick()}},animMs+k*140)}
   setStatus();kick();
   if(!over&&isAI(cur))thinkThen(animMs+extra)}
-function thinkThen(wait=0){busy=true;setStatus();const id=gid;setTimeout(()=>{if(id===gid)aiMove()},Math.max(420,wait+120))}
+// 电脑在后台（Worker）想棋，同时等对方的子翻完、再停一小会儿才落子，免得快得看不清
+function thinkThen(wait=0){busy=true;setStatus();const id=gid,t0=performance.now();let pick=null,ready=false;
+  const go=()=>{if(id!==gid||!ready||pick===null)return;aiMove(pick)};
+  setTimeout(()=>{ready=true;go()},Math.max(800,wait+750));
+  askAI(Int8Array.from(g),cur,$('diff').value,i=>{if(id!==gid)return;lastAiMs=performance.now()-t0;pick=i;go()})}
 
 function toCell(e){const rc=cv.getBoundingClientRect(),mx=(e.clientX-rc.left)*(total/rc.width),my=(e.clientY-rc.top)*(total/rc.height),c=Math.floor((mx-PAD)/CELL),r=Math.floor((my-PAD)/CELL);return r<0||r>=N||c<0||c>=N?null:r*8+c}
 cv.addEventListener('mousemove',e=>{const i=toCell(e);if(i!==hover){hover=i;kick()}});
@@ -254,7 +258,7 @@ function syncHint(){$('hint').textContent=hintOn?'落点提示 · 开':'落点�
 function undo(){if(!moves.length)return;let pm;
   if(mode==='pvc'){const h=human();if(!moves.some(m=>m.p===h))return;while(moves[moves.length-1].p!==h)moves.pop();pm=moves.pop()}
   else pm=moves.pop();
-  hush();gid++;busy=false;g=newBoard();for(const m of moves){for(const j of flipsFor(g,m.i,m.p))g[j]=m.p;g[m.i]=m.p}
+  hush();stopAI();gid++;busy=false;g=newBoard();for(const m of moves){for(const j of flipsFor(g,m.i,m.p))g[j]=m.p;g[m.i]=m.p}
   cur=pm.p;flips={};placedT={};lastI=moves.length?moves[moves.length-1].i:-1;note='';over=false;winT=0;parts=[];animEnd=0;touchPending=null;hover=null;
   sfx('pearlPick',.7,1);setStatus();kick()}
 
@@ -303,9 +307,25 @@ function chooseMove(b,p,diff){
   const phone=innerWidth<=600;
   if(diff==='medium')return bestMove(b,p,300,2);
   return bestMove(b,p,phone?800:1000,64)}
-function aiMove(){
+// 普通、困难要搜好几百毫秒：放进 Worker 里算，页面（翻子动画、按钮）不会卡住；Worker 用不了时才在本页算
+let worker=null,reqId=0,waiting=null,aiWorkerOK=false;
+function mkWorker(){try{
+  const src=`const RAYS=${JSON.stringify(RAYS)},W=${JSON.stringify(W)},ORDER=${JSON.stringify(ORDER)},CORNER_OF=Int8Array.from(${JSON.stringify([...CORNER_OF])});const TIMEOUT={};let nodes=0,deadline=0;\n`+
+    [flipsFor,canAt,legalMoves,count,evalPos,finalScore,nega,bestMove].map(String).join('\n')+
+    `\nonmessage=e=>{const d=e.data;postMessage({id:d.id,i:bestMove(Int8Array.from(d.b),d.p,d.ms,d.depth)})}`;
+  worker=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
+  worker.onmessage=e=>{if(!waiting||e.data.id!==waiting.id)return;const w=waiting;waiting=null;aiWorkerOK=true;w.cb(e.data.i)};
+  worker.onerror=e=>{e.preventDefault&&e.preventDefault();console.warn('黑白棋 Worker 出错，改在本页计算',e.message);worker=null;if(waiting){const w=waiting;waiting=null;w.cb(chooseMove(w.b,w.p,w.diff))}}}
+  catch(e){worker=null}}
+mkWorker();
+// 悔棋、重开时，正在算的那一步作废（直接换一个新 Worker，免得新的一步排在旧的后面）
+function stopAI(){if(waiting&&worker){worker.terminate();mkWorker()}waiting=null}
+function askAI(b,p,diff,cb){
+  if(diff==='easy'||!worker||legalMoves(b,p).length<=1){cb(chooseMove(b,p,diff));return}
+  const phone=innerWidth<=600,ms=diff==='medium'?300:phone?800:1000,depth=diff==='medium'?2:64;
+  waiting={id:++reqId,b,p,diff,cb};worker.postMessage({id:reqId,b:[...b],p,ms,depth})}
+function aiMove(i){
   if(over||!isAI(cur)){busy=false;setStatus();return}
-  const t0=performance.now(),i=chooseMove(g,cur,$('diff').value);lastAiMs=performance.now()-t0;
   busy=false;place(i)}
 
 // ================= 控件 =================

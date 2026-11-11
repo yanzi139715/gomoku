@@ -361,7 +361,8 @@ function aiChoose(pl,lvl){
       if(!best||v>best.v2){best=m;m.v2=v}}
     return best}
   return mv[0]}
-function thinkThen(){busy=true;thinkingAI=true;setStatus();const id=gid;setTimeout(()=>{if(id===gid)aiTurn()},420)}
+// 你的子落定后停约 0.7 秒电脑才起跳（落下时离你落子约 1 秒），别太急
+function thinkThen(){busy=true;thinkingAI=true;setStatus();const id=gid;setTimeout(()=>{if(id===gid)aiTurn()},700)}
 function aiTurn(){
   if(over){busy=false;return}
   const pl=cur,m=aiChoose(pl,document.getElementById('diff').value);

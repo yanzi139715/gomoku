@@ -382,7 +382,7 @@ function runLocal(req){setTimeout(()=>{if(req.id!==gid)return;const snap=Array.f
 const aiLog=[];
 function onAI(r){if(!pending||r.id!==pending.id||r.id!==gid)return;const req=pending;pending=null;
   aiLog.push({ms:r.ms,depth:r.depth,nodes:r.nodes,level:req.level});
-  const wait=Math.max(0,420-(performance.now()-req.t0));
+  const wait=Math.max(0,1000-(performance.now()-req.t0));// 从你走完算起约 1 秒电脑才走，别太急
   setTimeout(()=>{if(req.id!==gid)return;busy=false;if(r.move)doMove(r.move);else setStatus()},wait)}
 function thinkThen(){busy=true;setStatus();
   pending={id:gid,level:document.getElementById('diff').value,hist:game.map(g=>g.hb),hc:game.map(g=>g.chk?1:0),t0:performance.now()};

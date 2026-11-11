@@ -196,7 +196,10 @@ function place(r,c){
   else cur=3-cur;
   setStatus();kick();
   if(!over&&mode==='pvc'&&cur===aiColor())thinkThen()}
-function thinkThen(){busy=true;setStatus();const id=gid;setTimeout(()=>{if(id===gid)aiMove()},420)}
+// 电脑至少等 AI_WAIT 毫秒才落子（从你落子算起，约 1 秒），算得慢就等它算完；先让你的子画出来再开始算
+const AI_WAIT=1000;let aiT0=0;
+function thinkThen(){busy=true;setStatus();aiT0=performance.now();const id=gid;setTimeout(()=>{if(id===gid)aiMove()},30)}
+function aiDone(id,bm){setTimeout(()=>{if(id!==gid||over)return;busy=false;place(bm.r,bm.c)},Math.max(0,AI_WAIT-(performance.now()-aiT0)))}
 
 function toGrid(e){const rc=cv.getBoundingClientRect(),mx=(e.clientX-rc.left)*(total/rc.width),my=(e.clientY-rc.top)*(total/rc.height),c=Math.round((mx-PAD)/CELL),r=Math.round((my-PAD)/CELL);return r<0||r>=SIZE||c<0||c>=SIZE?null:{r,c}}
 cv.addEventListener('mousemove',e=>{const g=toGrid(e);if(g?.r!==hover?.r||g?.c!==hover?.c){hover=g;if(!raf){raf=requestAnimationFrame(frame)}}});
@@ -218,7 +221,7 @@ function clack(p){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),.8,(p===1?.95:
 // 赢：古筝 D 羽调五声音阶慢慢往上拨；输（人机模式电脑赢）：四个音慢慢落下
 // 悔棋或重开时，把还在响的输赢声停掉
 function hush(){['winGuzheng','loseGuzheng'].forEach(f=>(POOL[f]||[]).forEach(a=>{if(!a.muted)a.pause()}))}
-function chime(){const lose=mode==='pvc'&&cur===aiColor();setTimeout(()=>sfx(lose?'loseGuzheng':'winGuzheng',.85,1),250)}
+function chime(){const lose=mode==='pvc'&&cur===aiColor(),g=gid;setTimeout(()=>{if(g===gid)sfx(lose?'loseGuzheng':'winGuzheng',.85,1)},250)}
 function syncSound(){document.getElementById('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}
 
 // ================= 悔棋：和电脑下时退回到你上一步之前 =================
@@ -253,12 +256,12 @@ function searchMove(ac,diff){let depth,range;
 // 电脑放到后台线程里算，想的时候页面照样能点、动画照样走；后台线程不可用时退回直接算
 const ENGINE=[localScore,patternScore,scoreLine,evaluate,getCandidates,quickScore,minimax,checkWin,searchMove].map(f=>f.toString()).join('\n');
 let worker=null;try{worker=new Worker(URL.createObjectURL(new Blob([`const SIZE=${SIZE},DIRS=${JSON.stringify(DIRS)};let grid;\n${ENGINE}\nonmessage=e=>{grid=e.data.grid;postMessage({id:e.data.id,bm:searchMove(e.data.ac,e.data.diff)})}`],{type:'text/javascript'})));
-  worker.onmessage=e=>{if(e.data.id!==gid||over)return;busy=false;place(e.data.bm.r,e.data.bm.c)};worker.onerror=()=>{worker=null}}catch(e){worker=null}
+  worker.onmessage=e=>{if(e.data.id!==gid||over)return;aiDone(e.data.id,e.data.bm)};worker.onerror=e=>{e.preventDefault&&e.preventDefault();worker=null;if(busy&&!over)aiMove()}}catch(e){worker=null}
 function aiMove(){
   if(over){busy=false;return}
   const ac=aiColor(),diff=document.getElementById('diff').value;
   if(worker){worker.postMessage({id:gid,grid,ac,diff});return}
-  const bm=searchMove(ac,diff);busy=false;place(bm.r,bm.c)}
+  aiDone(gid,searchMove(ac,diff))}
 
 // ================= 控件 =================
 document.getElementById('modeSeg').onclick=e=>{const b=e.target.closest('button');if(!b||b.dataset.m===mode)return;mode=b.dataset.m;
