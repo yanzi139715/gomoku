@@ -172,7 +172,7 @@ const unit=()=>(board.offsetWidth-MX*2)/COLS;
 
 function build(){
   board.querySelectorAll('.blk,.hint').forEach(n=>n.remove());
-  pieces=[];hist=[];steps=0;lastId=null;won=false;sel=null;drag=null;gid++;parts=[];
+  hush();pieces=[];hist=[];steps=0;lastId=null;won=false;sel=null;drag=null;gid++;parts=[];
   const L=LEVELS[li],seen={};
   L.rows.forEach((row,r)=>[...row].forEach((ch,c)=>{if(ch==='.')return;(seen[ch]=seen[ch]||[]).push([r,c])}));
   for(const ch of Object.keys(seen)){const cs=seen[ch],r=Math.min(...cs.map(x=>x[0])),c=Math.min(...cs.map(x=>x[1])),h=Math.max(...cs.map(x=>x[0]))-r+1,w=Math.max(...cs.map(x=>x[1]))-c+1;
@@ -207,11 +207,11 @@ function checkWin(){const cao=pieces.find(p=>p.id==='C');
     const g0=gid;
     setTimeout(()=>{if(g0!==gid||!won)return;cao.r=5;cao.el.classList.add('out');place(cao);
       [0,1,2,3,4].forEach(i=>setTimeout(()=>{if(g0===gid&&won){spawnPetals(i===0);kickFx()}},i*220));
-      [0,1,2].forEach(i=>setTimeout(()=>{if(g0===gid&&won)sfx('pearlDrop'+(2+i),.7,.98+i*.07)},i*170))},330)}}
+      sfx('winGuzheng',.85,1)},330)}}
 function undo(){if(!hist.length)return;
   const h=hist.pop(),p=pieces.find(x=>x.id===h.id);
   p.r=h.r;p.c=h.c;steps=h.steps;lastId=h.lastId;
-  if(won){won=false;const cao=pieces.find(x=>x.id==='C');cao.el.classList.remove('out');parts=[]}
+  hush();if(won){won=false;const cao=pieces.find(x=>x.id==='C');cao.el.classList.remove('out');parts=[]}
   gid++;sel=null;clearHints();for(const q of pieces){q.el.classList.remove('out');place(q)}
   sfx('pearlPick',.7,1);setStatus();syncUI()}
 
@@ -320,8 +320,10 @@ const POOL={},unlocked={v:false};
 function apool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
 function sfx(f,vol,rate){if(!soundOn)return;const ps=apool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
 // iPhone 要求声音第一次由手指触发：第一次点击时把所有声音静音播一下，之后才能正常出声
-function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather'].forEach(f=>apool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather','winGuzheng','loseGuzheng'].forEach(f=>apool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
 addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
+// 通关时放一次 winGuzheng；悔棋、换关、重来时停掉
+function hush(){['winGuzheng','loseGuzheng'].forEach(f=>(POOL[f]||[]).forEach(a=>{if(!a.muted)a.pause()}))}
 // 玉牌滑到位：珠子落下的小弹跳，五个里随机挑
 function clack(){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),.7,1.02+(Math.random()-.5)*.05)}
 function syncSound(){$('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}

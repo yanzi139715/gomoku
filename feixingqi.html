@@ -343,8 +343,11 @@ const POOL={},unlocked={v:false};
 function apool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
 function sfx(f,vol,rate){if(!soundOn)return;const ps=apool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
 // iPhone 要求声音第一次由手指触发：第一次点击时把所有声音静音播一下，之后电脑走子也能出声
-function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather','capture','dice'].forEach(f=>apool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather','capture','dice','winGuzheng','loseGuzheng'].forEach(f=>apool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
 addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
+// 一局分出胜负时放一次古筝：和电脑下输了放 loseGuzheng，其余赢家都放 winGuzheng；悔棋、重新开始时停掉
+function hush(){['winGuzheng','loseGuzheng'].forEach(f=>(POOL[f]||[]).forEach(a=>{if(!a.muted)a.pause()}))}
+function chime(lose){const g=gid;setTimeout(()=>{if(g===gid)sfx(lose?'loseGuzheng':'winGuzheng',.85,1)},250)}
 function clack(k,vol=.6){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),vol,.96+k*.03+(Math.random()-.5)*.05)}
 function syncSound(){$('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}
 
@@ -363,7 +366,7 @@ function buildSeats(){const box=$('seats'),old=[...box.querySelectorAll('select'
     l.innerHTML=`${dotH(k)}<span>${NC[k]}</span><select data-k="${k}"><option value="me">我</option><option value="friend">朋友</option><option value="cpu">电脑</option></select>`;
     const s=l.querySelector('select');s.value=seat[k];s.onchange=reset;box.appendChild(l)})}
 function reset(){
-  if(pos.length&&pos.some(a=>a.some(p=>p!==-1)))sfx('pearlGather',.8,1);
+  hush();if(pos.length&&pos.some(a=>a.some(p=>p!==-1)))sfx('pearlGather',.8,1);
   gid++;document.querySelectorAll('#seats select').forEach(s=>seat[+s.dataset.k]=s.value);
   act=actColors(nCount);pos=[0,1,2,3].map(()=>[-1,-1,-1,-1]);cur=act[0];sixes=0;over=false;winner=-1;anim=null;ghosts=[];appear={};parts=[];winT=0;pend=[];movable=[];thinkAI=false;
   $('dice').classList.remove('roll');setFace(1);diceColor();kick();startTurn()}
@@ -408,7 +411,7 @@ function startMove(k,i,d){
   // 先把飞机算在原地（动画期间不画静态那一份）
   play()}
 function afterMove(k,d){if(over)return;
-  if(pos[k].every(p=>p===GOAL)){over=true;winner=k;phase='over';winT=performance.now();
+  if(pos[k].every(p=>p===GOAL)){over=true;winner=k;phase='over';winT=performance.now();chime(!isHuman(k));
     setStatus(isHuman(k)?(seat.some(s=>s==='me')&&seat[k]==='me'&&act.filter(x=>seat[x]==='me').length===1?'你赢啦！四架飞机都到家了':who(k)+'赢啦！四架都到家了'):NC[k]+'（电脑）先到家，再来一局吧');
     setHint('');$('dice').classList.remove('ready');
     [0,1,2,3,4].forEach(n=>later(n*160,()=>{if(over){spawnPetals(rand(W*.3,W*.7),rand(H*.3,H*.6),n===0);kick()}}));return}

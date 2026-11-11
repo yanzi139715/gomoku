@@ -335,7 +335,7 @@ function setStatus(){
 }
 function refreshScore(){scoreInfo=scoreBoard(bd,dead);terr=scoreInfo.terr}
 function reset(){
-  if(snaps.length>1){hush();sfx('pearlGather',.8,1)}
+  hush();if(snaps.length>1)sfx('pearlGather',.8,1);
   stopAI();gid++;busy=false;phase='play';cur=1;caps=[0,0];passes=0;last=null;dead=new Set();result=null;terr=null;scoreInfo=null;
   bd=new Int8Array(N2);stoneT=new Float64Array(N2);fades=[];parts=[];hover=null;touchPending=null;resignArm=0;flashMsg='';
   snaps=[snapNow()];
@@ -383,15 +383,17 @@ let soundOn=true;try{soundOn=localStorage.getItem('gomoku-sound')!=='off'}catch(
 const POOL={},unlocked={v:false};
 function pool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
 function sfx(f,vol,rate){if(!soundOn)return;const ps=pool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
-function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather','capture'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather','capture','winGuzheng','loseGuzheng'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
 addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
+// 一局分出胜负时放一次古筝：和电脑下输了放 loseGuzheng，其余赢家都放 winGuzheng；悔棋、重新开始时停掉
+function chime(lose){const g=gid;setTimeout(()=>{if(g===gid)sfx(lose?'loseGuzheng':'winGuzheng',.85,1)},250)}
 function clack(p){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),.8,(p===1?.95:1.04)+(Math.random()-.5)*.04)}
-function hush(){}
+function hush(){['winGuzheng','loseGuzheng'].forEach(f=>(POOL[f]||[]).forEach(a=>{if(!a.muted)a.pause()}))}
 function syncSound(){$('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}
 
 // ================= 悔棋 / 认输 / 数子 =================
 function undo(){
-  stopAI();gid++;busy=false;
+  hush();stopAI();gid++;busy=false;
   if(phase==='done'&&result&&result.resign){phase='play';result=null}
   else{const t=undoTarget();if(t<0)return;snaps.length=t+1;restore(snaps[t]);result=null;
     stoneT=new Float64Array(N2);fades=[];parts=[];dead=new Set();terr=null;scoreInfo=null}
@@ -399,17 +401,17 @@ function undo(){
 function resign(){
   if(!resignArm){resignArm=setTimeout(()=>{resignArm=0;setStatus()},3000);setStatus();return}
   clearTimeout(resignArm);resignArm=0;stopAI();gid++;busy=false;
-  const w=3-cur;phase='done';terr=null;scoreInfo=null;
+  const w=3-cur;phase='done';terr=null;scoreInfo=null;chime(mode==='pvc'&&w===aiColor());
   result={resign:true,winner:w,text:mode==='pvc'?(w===human()?'电脑认输，你赢啦！':'你认输了，再来一局吧'):`${NAMES[cur-1]}认输，${NAMES[w-1]}胜`};
   setStatus();kick()}
-function confirmScore(){
+function confirmScore(){if(phase!=='mark')return;
   refreshScore();const s=scoreInfo,B=s.bs+s.bt,W=s.ws+s.wt+KOMI[N],d=B-W;
   let w=0,text;
   if(d===0)text='平局';
   else{w=d>0?1:2;const n=Math.abs(d),ns=n%1?n:n;
     const lead=mode==='pvc'?(w===human()?'你赢啦！':NAMES[w-1]+'赢了，再来一局吧'):NAMES[w-1]+'胜';
     text=`${lead}（${ns} 点）`}
-  phase='done';result={winner:w,text};
+  phase='done';result={winner:w,text};if(w)chime(mode==='pvc'&&w===aiColor());
   setStatus();
   if(w){spawnPetals(0,0,true,0)}
   kick()}

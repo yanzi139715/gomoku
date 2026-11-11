@@ -263,7 +263,7 @@ function setStatus(){const el=document.getElementById('status');el.classList.tog
   else el.innerHTML=dot(winner)+(mode==='pvc'?(winner===human()?'你赢啦！':NAMEC[HOME[winner]]+'赢了，再来一局吧'):NAMEC[HOME[winner]]+'赢啦！');
   const h=human();document.getElementById('undo').disabled=!chain&&!(mode==='pvc'?hist.some(m=>m.pl===h):hist.length)}
 function reset(){
-  if(hist&&hist.length){sfx('pearlGather',.8,1)}
+  hush();if(hist&&hist.length){sfx('pearlGather',.8,1)}
   gid++;const f=mode==='pvc'&&human()===1;
   cell=new Int8Array(N).fill(-1);pcs=[[],[]];
   for(const pl of[0,1])for(const id of CH[HOME[pl]]){cell[id]=pl;pcs[pl].push(id)}
@@ -284,7 +284,7 @@ function doMove(pl,from,to,path){
   setStatus();kick();
   setTimeout(()=>{if(id!==gid)return;anim=null;busy=false;endTurn(pl)},total+40)}
 function endTurn(pl){const id=gid;
-    if(checkWin(pl)){over=true;winner=pl;winT=performance.now();
+    if(checkWin(pl)){over=true;winner=pl;winT=performance.now();chime(mode==='pvc'&&pl===aiPl());
       CH[(HOME[pl]+3)%6].forEach((g,i)=>setTimeout(()=>{if(id===gid&&over){const h=HOLES[g];spawnPetals(h.x,h.y,i===0);kick()}},i*120))}
     else{cur=1-cur;if(!hasMove(cur))cur=1-cur}
     setStatus();kick();
@@ -324,8 +324,11 @@ const POOL={},unlocked={v:false};
 function pool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
 function sfx(f,vol,rate){if(!soundOn)return;const ps=pool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
 // iPhone 要求声音第一次由手指触发：第一次点击时把所有声音静音播一下，之后电脑落子也能出声
-function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather','winGuzheng','loseGuzheng'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
 addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
+// 一局分出胜负时放一次古筝：和电脑下输了放 loseGuzheng，其余赢家都放 winGuzheng；悔棋、重新开始时停掉
+function hush(){['winGuzheng','loseGuzheng'].forEach(f=>(POOL[f]||[]).forEach(a=>{if(!a.muted)a.pause()}))}
+function chime(lose){const g=gid;setTimeout(()=>{if(g===gid)sfx(lose?'loseGuzheng':'winGuzheng',.85,1)},250)}
 // 每一次落地都是一下珍珠小弹跳，五个里随机挑
 function clack(pl){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),.7,(pl===0?.97:1.04)+(Math.random()-.5)*.05)}
 function syncSound(){document.getElementById('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}
@@ -335,7 +338,7 @@ function revert(m){cell[m.to]=-1;cell[m.from]=m.pl;pcs[m.pl][pcs[m.pl].indexOf(m
 function undo(){if(cancelChain())return;if(!hist.length)return;
   if(mode==='pvc'){const h=human();if(!hist.some(m=>m.pl===h))return;while(hist[hist.length-1].pl!==h)revert(hist.pop());revert(hist.pop());cur=h}
   else{const m=hist.pop();revert(m);cur=m.pl}
-  gid++;busy=false;anim=null;over=false;winner=-1;winT=0;parts=[];sel=-1;selPrev=null;hover=-1;thinkingAI=false;sfx('pearlPick',.7,1);setStatus();kick()}
+  hush();gid++;busy=false;anim=null;over=false;winner=-1;winT=0;parts=[];sel=-1;selPrev=null;hover=-1;thinkingAI=false;sfx('pearlPick',.7,1);setStatus();kick()}
 
 // ================= 电脑：看每颗子到对面角顶点的距离，别把子落在后面 =================
 function score(pl){let s=0,mx=0;const L=pcs[pl],dg=DG[pl],ax=AX[pl];for(let i=0;i<L.length;i++){const d=dg[L[i]];s+=d+ax[L[i]];if(d>mx)mx=d}return s+.35*mx}

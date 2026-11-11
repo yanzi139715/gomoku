@@ -201,7 +201,7 @@ function setStatus(){const el=$('status'),a=count(g,1),b=count(g,2);let msg='',w
   el.innerHTML=`<span class="sc${!over&&cur===1?' on':''}"><i class="dot p1"></i><span id="c1">${a}</span></span><span class="msg">${msg}${busy&&!over?'<span class="thinking"><i></i><i></i><i></i></span>':''}</span><span class="sc${!over&&cur===2?' on':''}"><i class="dot p2"></i><span id="c2">${b}</span></span>`;
   const h=human();$('undo').disabled=!(mode==='pvc'?moves.some(m=>m.p===h):moves.length)}
 function reset(){
-  if(moves&&moves.length)sfx('pearlGather',.8,1);
+  hush();if(moves&&moves.length)sfx('pearlGather',.8,1);
   gid++;g=newBoard();cur=1;over=false;busy=false;moves=[];flips={};placedT={};lastI=-1;note='';hover=null;touchPending=null;winT=0;parts=[];animEnd=0;
   setStatus();kick();
   if(isAI(cur))thinkThen()}
@@ -222,6 +222,7 @@ function advance(animMs){
   else if(hasMove(g,cur)){note=(mode==='pvc'&&o===human()?'你':NAMES[o-1])+'无处可下，停一手';extra=900}
   else{over=true;winT=performance.now();
     const a=count(g,1),b=count(g,2);
+    if(a!==b)chime(mode==='pvc'&&(a>b?1:2)===aiColor());
     if(a!==b)for(let k=0;k<5;k++)setTimeout(()=>{if(over){spawnPetals(rand(40,total-40),rand(40,total-40),k===0);kick()}},animMs+k*140)}
   setStatus();kick();
   if(!over&&isAI(cur))thinkThen(animMs+extra)}
@@ -240,8 +241,11 @@ const POOL={},unlocked={v:false};
 function pool(f){if(!POOL[f]){POOL[f]=[];for(let i=0;i<5;i++){const a=new Audio('sounds/'+f+'.mp3');a.preload='auto';a.preservesPitch=false;a.webkitPreservesPitch=false;POOL[f].push(a)}}return POOL[f]}
 function sfx(f,vol,rate){if(!soundOn)return;const ps=pool(f),a=ps.find(x=>x.paused||x.ended)||ps[0];try{a.pause();a.currentTime=0}catch(e){}a._live=true;a.muted=false;a.volume=vol;a.playbackRate=rate;a.play().catch(()=>{})}
 // iPhone 要求声音第一次由手指触发：第一次点击时把所有声音静音播一下，之后电脑落子也能出声
-function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
+function unlockAudio(){if(unlocked.v)return;unlocked.v=true;['pearlDrop1','pearlDrop2','pearlDrop3','pearlDrop4','pearlDrop5','pearlPick','pearlGather','winGuzheng','loseGuzheng'].forEach(f=>pool(f).forEach(a=>{a.muted=true;const p=a.play();const done=()=>{if(a._live)return;a.pause();a.currentTime=0;a.muted=false};p&&p.then?p.then(done,done):done()}))}
 addEventListener('pointerdown',unlockAudio,{once:false,passive:true});
+// 一局分出胜负时放一次古筝：和电脑下输了放 loseGuzheng，其余赢家都放 winGuzheng；悔棋、重新开始时停掉
+function hush(){['winGuzheng','loseGuzheng'].forEach(f=>(POOL[f]||[]).forEach(a=>{if(!a.muted)a.pause()}))}
+function chime(lose){const g=gid;setTimeout(()=>{if(g===gid)sfx(lose?'loseGuzheng':'winGuzheng',.85,1)},250)}
 function clack(p){sfx('pearlDrop'+(1+Math.floor(Math.random()*5)),.8,(p===1?.95:1.04)+(Math.random()-.5)*.04)}
 function syncSound(){$('sound').textContent=soundOn?'声音 · 开':'声音 · 关'}
 function syncHint(){$('hint').textContent=hintOn?'落点提示 · 开':'落点提示 · 关'}
@@ -250,7 +254,7 @@ function syncHint(){$('hint').textContent=hintOn?'落点提示 · 开':'落点�
 function undo(){if(!moves.length)return;let pm;
   if(mode==='pvc'){const h=human();if(!moves.some(m=>m.p===h))return;while(moves[moves.length-1].p!==h)moves.pop();pm=moves.pop()}
   else pm=moves.pop();
-  gid++;busy=false;g=newBoard();for(const m of moves){for(const j of flipsFor(g,m.i,m.p))g[j]=m.p;g[m.i]=m.p}
+  hush();gid++;busy=false;g=newBoard();for(const m of moves){for(const j of flipsFor(g,m.i,m.p))g[j]=m.p;g[m.i]=m.p}
   cur=pm.p;flips={};placedT={};lastI=moves.length?moves[moves.length-1].i:-1;note='';over=false;winT=0;parts=[];animEnd=0;touchPending=null;hover=null;
   sfx('pearlPick',.7,1);setStatus();kick()}
 
