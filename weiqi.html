@@ -165,7 +165,7 @@ function playout(b,col,last,acc){let ps=0,n=0;const lim=N2*3;
 
 // —— 想一步：先用规则挑候选，再用模拟对局比较；顺便估计每个点最后归谁，用来判断要不要停一手 ——
 // q={n,b,col,komi,passes,prev,budget}；返回 {move:-1 表示停一手, ms, est, stat, po}
-function think(q){const t0=performance.now();if(N!==q.n)geom(q.n);
+function think(q){const t0=performance.now();if(N!==q.n||NB.length!==q.n*q.n)geom(q.n);
   const b0=Int8Array.from(q.b),ac=q.col,oc=3-ac,sgn=ac===1?1:-1,komi=q.komi,prev=q.prev;
   let stones=0;for(let i=0;i<N2;i++)if(b0[i])stones++;
   const early=stones<N2*.3,mid=(N-1)/2,cands=[];
