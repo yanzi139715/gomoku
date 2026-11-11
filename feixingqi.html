@@ -87,14 +87,15 @@ select:focus{outline:none;border-color:var(--ink)}
 <button class="help" id="helpBtn" aria-label="规则说明">?</button>
 <div class="rules-mask" id="rulesMask" role="dialog" aria-modal="true" aria-label="飞行棋怎么玩"><div class="rules"><h3>飞行棋怎么玩</h3>
 <p>四种颜色的飞机，各有 4 架停在自己角上的机场里。谁先把 4 架飞机全部送到中央的大桃花，谁就赢。</p>
-<h4>起飞</h4><ul><li>掷到 <b>6</b>，才能把一架飞机从机场开到自己颜色的<b>起飞点</b>（机场门口颜色最深、有小飞机标记的那一格）。</li>
+<h4>起飞</h4><ul><li>场上还没有自己的飞机时，<b>掷到几都能起飞</b>一架，开到自己颜色的<b>起飞点</b>（机场门口颜色最深、有小飞机标记的那一格）。</li>
+<li>已经有飞机在外面了，要掷到 <b>6</b> 才能再起飞一架。</li>
 <li>掷到 6 的人<b>可以再掷一次</b>。连续掷出三个 6，第三个不算数，直接换下一位。</li></ul>
 <h4>怎么走</h4><ul><li>每回合掷一次骰子，选一架飞机，点数是几就<b>顺时针</b>走几格。</li>
 <li>绕外圈走完一整圈（50 格）后，拐进自己颜色的<b>终点跑道</b>，一直走到中央。</li></ul>
 <h4>跳子</h4><ul><li>如果飞机停在<b>和自己同色</b>的格子上，会自动向前跳到下一个同色格（刚好 4 格）。</li></ul>
 <h4>飞棋</h4><ul><li>每个角的外沿有一条粉色<b>虚线</b>，连着两个同色格，上面各有一只小纸飞机。只有那个颜色的飞机停在虚线起点（不论是走到、还是跳到），才会顺着虚线<b>飞过去</b>（一次飞 12 格）。</li>
 <li>一次移动里，最多跳一次、飞一次。</li></ul>
-<h4>撞飞机</h4><ul><li>停在别人飞机所在的格子（包括跳、飞落脚的格子，也包括起飞点），对方的飞机就被<b>撞回机场</b>，要重新掷 6。</li>
+<h4>撞飞机</h4><ul><li>停在别人飞机所在的格子（包括跳、飞落脚的格子，也包括起飞点），对方的飞机就被<b>撞回机场</b>，要重新起飞。</li>
 <li>同色的飞机可以叠在一起，互不影响。</li></ul>
 <h4>回到终点</h4><ul><li>必须<b>正好</b>走到中央才算到达；点数多出来的部分，要从终点<b>往回退</b>。</li></ul>
 <h4>谁和谁玩</h4><ul><li>开局选 2、3、4 人，每个颜色可以设成「我」「朋友」「电脑」。「我」和「朋友」都是在这个屏幕上点；轮到谁，就亮起谁的颜色。</li>
@@ -274,7 +275,8 @@ const finalOf=(k,p,d)=>{const s=planMove(k,p,d);return s[s.length-1].to};
 // 某个停靠点上，有哪些别人的飞机会被撞回机场
 function victimsAt(k,rel){const out=[];if(rel<0||rel>LASTR)return out;const a=absOf(k,rel);
   for(const e of act)if(e!==k)for(let i=0;i<4;i++){const q=pos[e][i];if(q>=0&&q<=LASTR&&absOf(e,q)===a)out.push([e,i])}return out}
-function legalMoves(k,d){const out=[];for(let i=0;i<4;i++){const p=pos[k][i];if(p===GOAL)continue;if(p<0&&d!==6)continue;out.push({i,p})}return out}
+// 场上（起飞点到终点跑道）一架自己的飞机都没有时，掷到几都能起飞一架；已经有飞机在外面，要掷 6 才能再起飞
+function legalMoves(k,d){const out=[],free=!pos[k].some(p=>p>=0&&p!==GOAL);for(let i=0;i<4;i++){const p=pos[k][i];if(p===GOAL)continue;if(p<0&&d!==6&&!free)continue;out.push({i,p})}return out}
 const uniqueMoves=ms=>{const seen=new Set(),o=[];for(const m of ms)if(!seen.has(m.p)){seen.add(m.p);o.push(m)}return o};
 
 // ================= 绘制循环（有动画时才跑） =================

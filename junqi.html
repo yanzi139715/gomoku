@@ -371,7 +371,7 @@ function endTurn(){
   if(!over&&isAI(cur))thinkThen()}
 function thinkThen(extra=0){busy=true;setStatus();const g=gid,t0=performance.now();
   setTimeout(()=>{if(g!==gid)return;const act=aiChoose(cur,$('diff').value);
-    setTimeout(()=>{if(g!==gid)return;busy=false;if(!act){setStatus();return}if(act.k==='flip')doFlip(act.i);else doMove(act.f,act.t)},Math.max(0,420+extra-(performance.now()-t0)))},30)}
+    setTimeout(()=>{if(g!==gid)return;busy=false;if(!act){setStatus();return}if(act.k==='flip')doFlip(act.i);else doMove(act.f,act.t)},Math.max(0,1400+extra-(performance.now()-t0)))},30)}
 
 // ================= 点棋盘 =================
 function toIdx(e){const rc=cv.getBoundingClientRect(),mx=(e.clientX-rc.left)*(W/rc.width),my=(e.clientY-rc.top)*(H/rc.height);
