@@ -34,7 +34,6 @@ body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padd
 .seg button{font-family:inherit;font-size:13px;letter-spacing:2px;padding:7px 18px;border:1.5px solid var(--line);background:rgba(255,255,255,.7);color:var(--ink);cursor:pointer;transition:background .2s,color .2s;border-radius:0}
 .seg button+button{border-left:none}
 .seg button.on{background:var(--btn);color:var(--btnInk);border-color:var(--btn)}
-.seg button.off{opacity:.4}
 .subrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 select{font-family:inherit;font-size:13px;letter-spacing:1px;color:var(--ink);background:rgba(255,255,255,.7);border:1.5px solid var(--line);padding:6px 30px 6px 12px;cursor:pointer;appearance:none;-webkit-appearance:none;border-radius:0;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23b98593'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
@@ -82,7 +81,7 @@ select:focus{outline:none;border-color:var(--ink)}
 <h4>怎么下</h4><ul><li>墨莓（黑）先下，双方轮流把棋子放在交叉点上，放下就不能再挪。</li><li>棋子上下左右挨着的空点叫「气」，连在一起的同色棋子共用气。</li><li>一块棋的气全部被对方堵住，就会被「提」掉，从棋盘上拿走。</li></ul>
 <h4>不能下的地方</h4><ul><li><b>自杀</b>：落下去自己就没有气、又提不到对方的子，这种地方不能下。</li><li><b>打劫</b>：自己的一颗子刚被提掉，不能马上在原地把对方那颗提回来，要先在别处下一手。</li></ul>
 <h4>结束和数子</h4><ul><li>觉得已经没有地方好下了，就点「停一手」。双方连着各停一手，棋局结束。</li><li>和电脑下时，你停一手后，电脑觉得自己领先、或者已经没有值得下的地方，才会跟着停；落后的话它会接着下。</li><li>结束后，点一下已经活不了的子，它周围连着的、被同一片空点隔开的同色子会一起标成死子（再点一下取消），然后点「确认数子」看结果。</li><li>黑方先下占了便宜，所以白方（珍珠）额外加分：9 路贴 7 点，13 路和 19 路贴 7.5 点。</li><li>轮到你下的时候，也可以点「认输」。</li></ul>
-<h4>初学建议</h4><p>先从 9 路小棋盘下起，一盘十几分钟就能下完。和电脑下目前只有 9 路：和电脑下时换成 13 路、19 路会自动改成两人同下，换回 9 路再变回和电脑下。</p><button class="close">知道啦</button></div></div>
+<h4>初学建议</h4><p>先从 9 路小棋盘下起，一盘十几分钟就能下完。13 路、19 路也能和电脑下，棋盘越大一盘越长，电脑在大棋盘上也下得更随意一些。</p><button class="close">知道啦</button></div></div>
 <div class="title">桃 · 围棋</div>
 <div class="sub">一子一子，围出一片春天</div>
 
@@ -218,7 +217,7 @@ const DPR=Math.min(2,window.devicePixelRatio||1),total=TOT;
 const NAMES=['墨莓','珍珠'];
 const KOMI={9:7,13:7.5,19:7.5};
 const KOMI_TXT={9:'7 点',13:'3.75 子（7.5 点）',19:'3.75 子（7.5 点）'};
-let CELL=0,R0=0,STARS=[],autoPvp=false;
+let CELL=0,R0=0,STARS=[];
 let mode='pvc',phase='play',bd,cur,caps,passes,last,dead=new Set(),result=null,snaps=[],stoneT,fades=[],parts=[];
 let hover=null,hoverOK=false,touchPending=null,gid=0,busy=false,flashMsg='',flashTimer=0,animUntil=0,resignArm=0,terr=null,scoreInfo=null;
 const $=id=>document.getElementById(id);
@@ -438,17 +437,12 @@ function onAI(r){if(!pending||r.id!==pending.id||r.id!==gid)return;const p=pendi
     doPass();if(phase==='play')flash('电脑停了一手，轮到你')},wait)}
 
 // ================= 控件 =================
-function syncModeBtns(){document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on',x.dataset.m===mode));$('pvcOpts').classList.toggle('hidden',mode!=='pvc');
-  document.querySelector('#modeSeg [data-m=pvc]').classList.toggle('off',N!==9)}
+function syncModeBtns(){document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on',x.dataset.m===mode));$('pvcOpts').classList.toggle('hidden',mode!=='pvc');}
 $('modeSeg').onclick=e=>{const b=e.target.closest('button');if(!b||b.dataset.m===mode)return;
-  if(b.dataset.m==='pvc'&&N!==9){flash('和电脑下目前只有 9 路');return}
-  mode=b.dataset.m;autoPvp=false;syncModeBtns();reset()};
+  mode=b.dataset.m;syncModeBtns();reset()};
 $('sizeSeg').onclick=e=>{const b=e.target.closest('button');if(!b||+b.dataset.n===N)return;
   document.querySelectorAll('#sizeSeg button').forEach(x=>x.classList.toggle('on',x===b));
-  setupBoard(+b.dataset.n);let msg='';
-  if(N!==9&&mode==='pvc'){mode='pvp';autoPvp=true;msg='和电脑下目前只有 9 路，已切换为两人同下'}
-  else if(N===9&&autoPvp){mode='pvc';autoPvp=false;msg='回到 9 路，接着和电脑下'}
-  syncModeBtns();reset();if(msg)flash(msg)};
+  setupBoard(+b.dataset.n);syncModeBtns();reset()};
 $('side').onchange=reset;
 $('restart').onclick=reset;
 $('undo').onclick=undo;
